@@ -1,69 +1,70 @@
-# Развёртывание
+# Deployment
 
-Приложение — один статический бинарник. В нём уже лежат фронтенд, миграции базы и получение
-TLS-сертификатов. **nginx, certbot, Python, Node и sqlite3 на сервере не нужны.**
+The application is a single static binary. The frontend, the database migrations and TLS
+certificate issuance are all inside it already. **nginx, certbot, Python, Node and sqlite3
+are not needed on the server.**
 
-## 0. Что нужно заранее
+## 0. Prerequisites
 
-Домен или поддомен, у которого A-запись указывает на IP сервера:
+A domain or subdomain whose A record points at the server's IP:
 
 ```bash
-dig +short тренировки.example.ru
-# должен вернуть IP сервера
+dig +short gym.example.com
+# should return the server's IP
 ```
 
-Пока эта команда не вернёт нужный адрес, сертификат не выдадут.
+Until this command returns the right address, no certificate will be issued.
 
-**Проверьте, что порты свободны** — приложение занимает их само:
+**Check that the ports are free** — the application takes them itself:
 
 ```bash
 sudo ss -lntp | grep -E ':(80|443)\b'
-# пусто — можно продолжать
+# empty output means you can continue
 ```
 
-Если 443 уже кем-то занят, схема без обратного прокси не подойдёт.
+If something already holds 443, this reverse-proxy-free arrangement will not work.
 
-WireGuard работает по UDP и не конфликтует, но убедитесь, что firewall пропускает 80 и 443,
-**не трогая порты туннеля**.
+WireGuard runs over UDP and does not conflict, but make sure the firewall lets 80 and 443
+through **without touching the tunnel's ports**.
 
-## 1. Собрать
+## 1. Build
 
-На своей машине:
+On your own machine:
 
 ```bash
 make release
 # dist/gymtracker-linux-amd64
 ```
 
-Кросс-компиляция работает без тулчейна: драйвер SQLite чистый на Go, cgo не используется.
+Cross-compilation works without a toolchain: the SQLite driver is pure Go and cgo is unused.
 
-## 2. Пользователь и каталоги на сервере
+## 2. User and directories on the server
 
 ```bash
 sudo useradd --system --home /opt/gymtracker --shell /usr/sbin/nologin gymtracker
 sudo mkdir -p /opt/gymtracker/programs
 ```
 
-## 3. Файлы
+## 3. Files
 
 ```bash
-scp dist/gymtracker-linux-amd64 сервер:/tmp/gymtracker
-scp programs/*.json               сервер:/tmp/
-scp deploy/gymtracker.service     сервер:/tmp/
+scp dist/gymtracker-linux-amd64 server:/tmp/gymtracker
+scp programs/*.json             server:/tmp/
+scp deploy/gymtracker.service   server:/tmp/
 
-# на сервере
+# on the server
 sudo install -m 755 -o gymtracker -g gymtracker /tmp/gymtracker /opt/gymtracker/gymtracker
 sudo install -m 640 -o gymtracker -g gymtracker /tmp/*.json     /opt/gymtracker/programs/
 sudo install -m 644 /tmp/gymtracker.service /etc/systemd/system/
 ```
 
-## 4. Настройки
+## 4. Configuration
 
 ```bash
 sudo tee /opt/gymtracker/.env > /dev/null << 'EOF'
-GYM_DOMAIN=тренировки.example.ru
-GYM_ACME_EMAIL=вы@example.ru
-# Первое развёртывание — против тестового каталога Let's Encrypt.
+GYM_DOMAIN=gym.example.com
+GYM_ACME_EMAIL=you@example.com
+# First deployment — against Let's Encrypt's staging directory.
 GYM_ACME_STAGING=1
 EOF
 
@@ -71,9 +72,10 @@ sudo chmod 600 /opt/gymtracker/.env
 sudo chown gymtracker:gymtracker /opt/gymtracker/.env
 ```
 
-Пароля в настройках нет: он задаётся при заведении пользователя и хранится только хешем.
+There is no password in the configuration: it is set when the user is created, and only its
+hash is stored.
 
-## 5. Запуск
+## 5. Start
 
 ```bash
 sudo systemctl daemon-reload
@@ -82,127 +84,127 @@ sudo systemctl status gymtracker        # active (running)
 sudo journalctl -u gymtracker -n 50 --no-pager
 ```
 
-Проверьте, что сертификат заказался (в тестовом каталоге браузер будет ругаться на
-недоверенный сертификат — это ожидаемо):
+Check that the certificate was ordered (with the staging directory the browser will complain
+about an untrusted certificate — that is expected):
 
 ```bash
-curl -sk https://тренировки.example.ru/healthz
+curl -sk https://gym.example.com/healthz
 # {"ok":true}
 ```
 
-**Только после этого** переходите на боевые сертификаты:
+**Only after that** switch to production certificates:
 
 ```bash
 sudo sed -i '/GYM_ACME_STAGING/d' /opt/gymtracker/.env
-sudo rm -rf /var/lib/gymtracker/autocert     # тестовые сертификаты больше не нужны
+sudo rm -rf /var/lib/gymtracker/autocert     # the staging certificates are no longer needed
 sudo systemctl restart gymtracker
 ```
 
-Тестовый каталог здесь не формальность: Let's Encrypt разрешает **пять одинаковых
-сертификатов за семь дней**. Ошибка в systemd, firewall или DNS при боевом заказе
-блокирует домен на неделю.
+The staging directory is not a formality here: Let's Encrypt allows **five identical
+certificates per seven days**. A mistake in systemd, the firewall or DNS during a production
+order blocks the domain for a week.
 
-## 6. Пользователь приложения
+## 6. Application user
 
 ```bash
 sudo -u gymtracker GYM_DB=/var/lib/gymtracker/gymtracker.db \
-  /opt/gymtracker/gymtracker adduser igor --admin --name=Игорь
+  /opt/gymtracker/gymtracker adduser igor --admin --name=Igor
 # Пароль: ...
 ```
 
-Имя файла программы должно совпадать с именем пользователя: `programs/igor.json`.
-Открытой регистрации через веб нет намеренно — приложение личное.
+The program file's name has to match the username: `programs/igor.json`.
+There is deliberately no open web registration — the application is personal.
 
 ## 7. Firewall
 
 ```bash
 sudo ufw allow 80,443/tcp
-sudo ufw status                          # убедитесь, что порты WireGuard на месте
+sudo ufw status                          # confirm the WireGuard ports are still there
 ```
 
-## 8. На телефон
+## 8. Onto the phone
 
-Откройте `https://ваш-домен` в Safari → введите пароль → «Поделиться» → «На экран „Домой"».
+Open `https://your-domain` in Safari → enter the password → Share → "Add to Home Screen".
 
-**Внутри установленного приложения пароль спросят ещё раз** — у приложения с главного
-экрана своё хранилище, отдельное от Safari. Дальше вход не понадобится месяцами:
-срок токена продлевается при каждом обращении.
+**Inside the installed app the password will be asked for once more** — a home-screen app
+has its own storage, separate from Safari's. After that no login will be needed for months:
+the token's term is extended on every request.
 
 ---
 
-## Резервные копии
+## Backups
 
-Копии делает сам процесс: при старте, затем раз в сутки и дополнительно после завершённой
-тренировки, если предыдущая копия старше шести часов. Каждая копия проверяется на
-целостность, битая — удаляется. Хранится 14 последних.
+The process takes its own backups: at startup, then once a day, and additionally after a
+finished workout if the previous backup is more than six hours old. Every backup is checked
+for integrity, and a corrupt one is deleted. The 14 most recent are kept.
 
 ```
 /var/lib/gymtracker/backups/db-20260728T040000Z.db
 ```
 
-**Копия на том же диске — ещё не копия.** Забирайте её наружу:
+**A copy on the same disk is not yet a backup.** Pull it off the machine:
 
 ```bash
-curl -sf -b cookies.txt https://ваш-домен/api/admin/backup -o backup.db
+curl -sf -b cookies.txt https://your-domain/api/admin/backup -o backup.db
 ```
 
-Плюс кнопка «Выгрузить всё (JSON)» в приложении — полная выгрузка своих тренировок.
-Её же принимает обратно подкоманда импорта:
+Plus the "Выгрузить всё (JSON)" button in the app — a complete dump of your own workouts.
+The import subcommand takes the same file back:
 
 ```bash
 sudo -u gymtracker GYM_DB=/var/lib/gymtracker/gymtracker.db \
   /opt/gymtracker/gymtracker import igor trenirovki-2026-07-28.json
 ```
 
-Импорт сливает данные теми же правилами, что и синхронизация: его можно повторять,
-и он не затирает более свежие записи.
+Import merges data by the same rules as sync: it can be repeated, and it does not clobber
+fresher records.
 
-## Смена программы тренировок
+## Changing the training program
 
-Программа задана файлом `programs/<имя-пользователя>.json` — у каждого своя.
-Правки кода не требуется:
+A program is defined by the file `programs/<username>.json` — everyone has their own.
+No code change is needed:
 
 ```bash
 sudo -u gymtracker vi /opt/gymtracker/programs/igor.json
 sudo systemctl restart gymtracker
 ```
 
-Либо без перезапуска, из-под администратора:
+Or without a restart, as an admin:
 
 ```bash
-curl -sf -b cookies.txt -X POST https://ваш-домен/api/admin/program/reload
+curl -sf -b cookies.txt -X POST https://your-domain/api/admin/program/reload
 ```
 
-Битый файл не принимается: при старте служба откажется подниматься с указанием
-нарушенного правила, при перезагрузке вернёт 422 и оставит прежнюю программу.
+A broken file is not accepted: at startup the service refuses to come up and names the rule
+that was violated; on reload it returns 422 and leaves the previous program in place.
 
-**Правило, которое нельзя нарушать: `exercise_id` вечен.** Меняете упражнение — заводите
-новый id. Освободившийся id никогда не переиспользуйте под другое упражнение, иначе
-в один график склеятся присед и жим. Данные по упражнениям, выпавшим из программы,
-остаются в базе и в выгрузке, а история продолжает рисоваться снапшотом той программы,
-по которой была записана.
+**The rule you must not break: `exercise_id` is forever.** Change an exercise and you create
+a new id. Never reuse a freed id for a different exercise, or a squat and a bench press will
+be glued into one chart. Data for exercises that dropped out of the program stays in the
+database and in the export, and history keeps rendering from the snapshot of the program it
+was recorded against.
 
-## Обновление
+## Updating
 
 ```bash
 make release
-scp dist/gymtracker-linux-amd64 сервер:/tmp/gymtracker
+scp dist/gymtracker-linux-amd64 server:/tmp/gymtracker
 sudo install -m 755 -o gymtracker -g gymtracker /tmp/gymtracker /opt/gymtracker/gymtracker
 sudo systemctl restart gymtracker
 ```
 
-Миграции базы применяются при старте автоматически.
+Database migrations are applied automatically at startup.
 
-## Второй пользователь
+## A second user
 
-Модель данных к этому готова с первого дня, миграции не потребуется:
+The data model has been ready for this since day one; no migration will be needed:
 
 ```bash
 sudo -u gymtracker GYM_DB=/var/lib/gymtracker/gymtracker.db \
-  /opt/gymtracker/gymtracker adduser lena --name=Лена
-sudo -u gymtracker vi /opt/gymtracker/programs/lena.json   # своя программа
+  /opt/gymtracker/gymtracker adduser lena --name=Lena
+sudo -u gymtracker vi /opt/gymtracker/programs/lena.json   # a program of their own
 sudo systemctl restart gymtracker
 ```
 
-Истории, программы и выгрузки полностью разделены. Останется добавить поле имени
-на экране входа — сейчас, пока пользователь один, там только поле пароля.
+Histories, programs and exports are fully separated. What is left is adding a name field to
+the login screen — right now, while there is one user, it only has a password field.

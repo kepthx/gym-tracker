@@ -1,148 +1,210 @@
-# CONTEXT.md — Трекер тренировок
+# CONTEXT.md — Gym tracker
 
-Функциональное и дизайн-описание приложения. **Технологии, структура файлов и архитектура сознательно не заданы** — они выбираются заново при реализации. Здесь только то, что приложение должно делать и как должно выглядеть.
+A functional and design description of the application. **Technologies, file structure and
+architecture are deliberately left unspecified** — they are chosen anew at implementation
+time. What follows is only what the application has to do and how it has to look.
+
+> Note on language: the application's **interface is in Russian** (see §5, "Interface copy").
+> The codebase and its documentation are in English. Where this document quotes a piece of UI
+> text, the Russian original is kept alongside the translation.
 
 ---
 
-## 1. Зачем это
+## 1. What this is for
 
-Личное приложение для записи силовых тренировок прямо в зале, с телефона. Заменяет блокнот и заметки.
+A personal application for recording strength workouts right there at the gym, from a phone.
+It replaces a notebook and the notes app.
 
-Пользователь — один человек, тренируется 4 раза в неделю по фиксированной программе. Ему нужно во время тренировки: видеть, что делать дальше, помнить, с каким весом он делал это в прошлый раз, и отметить сделанное за секунду между подходами. После — видеть, растут ли веса.
+The user is one person who trains four times a week on a fixed program. During a workout they
+need to see what comes next, remember what weight they used last time, and mark a set as done
+in one second between sets. Afterwards, they need to see whether the weights are going up.
 
-**Главный сценарий:** телефон в руке, между подходами 90 секунд, руки в мелу или потные, экран мог погаснуть. Всё должно работать с одного касания и не требовать внимания.
+**The main scenario:** phone in hand, 90 seconds between sets, hands chalked or sweaty, screen
+may have gone dark. Everything has to work from a single tap and demand no attention.
 
-## 2. Обязательные свойства
+## 2. Mandatory properties
 
-Это не пожелания, а требования, из-за нарушения которых предыдущие версии переделывались:
+These are not wishes but requirements; violating them is why previous versions were rebuilt:
 
-1. **Мгновенное сохранение.** Каждое изменение — отметка подхода, вес, число повторов — сохраняется в момент действия, а не по кнопке в конце. Приложение может быть закрыто в любую секунду без потери данных.
-2. **Видимый статус сохранения.** Пользователь должен понимать, сохранилось ли. Молчаливая потеря данных недопустима: если сохранить не удалось, это показывается явно и заметно.
-3. **Продолжение прерванной тренировки.** Закрыл приложение на середине, вернулся через час или с другого устройства — тренировка ждёт ровно в том состоянии.
-4. **Никаких системных диалогов** (`alert`, `confirm`, `prompt` и аналоги). В standalone-режиме на iOS они не работают. Все подтверждения — элементами интерфейса.
-5. **История неприкосновенна.** Ничто в интерфейсе не должно приводить к потере записанных тренировок без явного намерения пользователя.
+1. **Instant saving.** Every change — marking a set, a weight, a rep count — is saved at the
+   moment of the action, not by a button at the end. The app can be closed at any second
+   without data loss.
+2. **Visible save status.** The user has to understand whether something was saved. Silent
+   data loss is unacceptable: if a save fails, that is shown explicitly and conspicuously.
+3. **Resuming an interrupted workout.** Closed the app halfway through, came back an hour
+   later or from another device — the workout is waiting in exactly the state it was left in.
+4. **No system dialogs** (`alert`, `confirm`, `prompt` and the like). They do not work in
+   standalone mode on iOS. Every confirmation is built from interface elements.
+5. **History is inviolable.** Nothing in the interface may lead to the loss of a recorded
+   workout without the user's explicit intent.
 
-## 3. Модель предметной области
+## 3. Domain model
 
-**Программа** — список тренировочных дней. День содержит упорядоченный список упражнений. Упражнение описано:
-- устойчивый идентификатор (никогда не меняется и не переиспользуется — к нему привязана история),
-- название,
-- схема («4×6–8», «3×40 м»),
-- количество подходов,
-- значение повторов по умолчанию (подставляется при отметке),
-- признак «с весом» (для упражнений без веса поле веса не показывается: планка, подтягивания).
+**Program** — a list of training days. A day holds an ordered list of exercises. An exercise
+is described by:
 
-Программа меняется примерно раз в 6–8 недель. Смена не должна требовать правки кода приложения и не должна затрагивать историю. Программа — единый источник правды: если данные о ней хранятся и на сервере, и на клиенте, дублирования быть не должно.
+- a stable identifier (never changed and never reused — history hangs off it),
+- a name,
+- a scheme ("4×6–8", "3×40 m"),
+- a number of sets,
+- a default rep value (pre-filled when a set is marked),
+- a "weighted" flag (for unweighted exercises the weight field is not shown: planks, pull-ups).
 
-**Тренировка (сессия)** — конкретное выполнение дня программы: дата, ссылка на день, набор подходов, признак завершённости. Незавершённая тренировка одновременно может быть только одна.
+The program changes roughly every 6–8 weeks. Changing it must not require editing the
+application's code and must not touch history. The program is a single source of truth: if
+data about it is stored both on the server and on the client, there must be no duplication.
 
-**Подход** — принадлежит сессии и упражнению, имеет порядковый номер, признак выполнения, вес и повторы. Повторы хранятся как текст, потому что бывают «12», «8/нога», «30с», «40м».
+**Workout (session)** — one performance of a program day: a date, a reference to the day, a
+set of sets, a finished flag. There can be only one unfinished workout at a time.
 
-**Владелец.** Сейчас пользователь один, но модель данных должна с самого начала предусматривать принадлежность сессии пользователю — чтобы добавление второго человека (жена, своя программа, своя история) не требовало миграции накопленных данных.
+**Set** — belongs to a session and an exercise, has an ordinal number, a done flag, a weight
+and reps. Reps are stored as text, because they come as "12", "8/leg", "30s", "40m".
 
-## 4. Экраны и поведение
+**Owner.** There is one user for now, but the data model has to account for a session
+belonging to a user from the very beginning — so that adding a second person (a spouse, with
+their own program and their own history) does not require migrating accumulated data.
 
-### 4.1. Вход
+## 4. Screens and behaviour
 
-Приложение закрыто паролем. Один экран: заголовок, поле пароля, кнопка. Ошибка показывается текстом под кнопкой.
+### 4.1. Login
 
-Сессия входа должна жить долго — месяцами. Спрашивать пароль в зале каждый раз неприемлемо. При этом попытки подбора пароля должны ограничиваться.
+The application is behind a password. One screen: a heading, a password field, a button. An
+error is shown as text below the button.
 
-### 4.2. Главный экран
+The login session has to last a long time — months. Being asked for a password at the gym
+every time is unacceptable. At the same time, password guessing has to be rate-limited.
 
-Сверху: название, строка состояния («Сила + гипертрофия · 4 дня · N тренировок записано»).
+### 4.2. Home screen
 
-Если есть незавершённая тренировка — заметная карточка над списком дней: какой день, сколько подходов уже сделано, когда начата. Две кнопки: продолжить и удалить.
+At the top: the name, a status line ("Сила + гипертрофия · 4 дня · N тренировок записано" —
+program name, day count, workouts recorded).
 
-Далее — карточки дней программы. В каждой: номер и название дня, подзаголовок с мышечными группами, перечисление упражнений мелким текстом, и справа — когда этот день выполнялся в последний раз (или «ещё не было»). Тап по карточке начинает тренировку.
+If there is an unfinished workout — a conspicuous card above the list of days: which day, how
+many sets are already done, when it was started. Two buttons: resume and delete.
 
-Внизу — выгрузка всех данных и выход из аккаунта. Отдельная заметная кнопка ведёт на экран прогресса.
+Below that, cards for the program's days. Each holds the day's number and name, a subheading
+with muscle groups, the exercises listed in small text, and on the right, when this day was
+last performed (or "ещё не было" — not yet). Tapping a card starts a workout.
 
-### 4.3. Экран тренировки
+At the bottom: export all data, and log out. A separate, conspicuous button leads to the
+progress screen.
 
-Шапка: кнопка выхода слева, справа счётчик «сделано/всего подходов» и индикация автосохранения. Под шапкой — название дня и тонкая полоса прогресса по тренировке.
+### 4.3. Workout screen
 
-Далее — карточка на каждое упражнение:
-- название и, если сегодня превышен исторический максимум веса, пометка рекорда;
-- схема подходов мелким текстом;
-- **результат прошлого раза** с датой — например «Прошлый раз (14 июл): 80×8 · 80×8 · 82.5×6». Это ключевой элемент: пользователь ориентируется по нему, решая, какой вес ставить сегодня;
-- счётчик выполненных подходов в углу;
-- ряд крупных квадратных кнопок — по одной на подход.
+Header: an exit button on the left, on the right a "done/total sets" counter and the autosave
+indicator. Below the header, the day's name and a thin progress bar for the workout.
 
-**Кнопка подхода** — основной элемент взаимодействия, должна быть удобной для попадания пальцем без прицеливания. Не отмечен — нейтральный вид с прочерком. Отмечен — подсвечен, и на нём показано число выполненных повторов.
+Then a card per exercise:
 
-Под каждой кнопкой (только для упражнений с весом) — компактное поле ввода веса в кг. Клавиатура должна открываться числовая, запятая и точка должны работать одинаково.
+- the name and, if today's weight exceeds the all-time best, a record marker;
+- the set scheme in small text;
+- **last time's result** with its date — for example "Прошлый раз (14 июл): 80×8 · 80×8 ·
+  82.5×6". This is the key element: the user orients by it when deciding today's weight;
+- a counter of completed sets in the corner;
+- a row of large square buttons — one per set.
 
-После отметки подхода сразу открывается поле правки повторов для этого подхода: подставляется значение из программы, пользователь может изменить (сделал 6 вместо 8) и подтвердить. Значение по умолчанию должно быть правильным в большинстве случаев, чтобы правка была исключением, а не обязательным шагом.
+**The set button** is the primary interactive element and has to be easy to hit with a finger
+without aiming. Unmarked: a neutral look with a dash. Marked: highlighted, showing the number
+of reps completed.
 
-Повторный тап по отмеченному подходу снимает отметку.
+Under each button (only for weighted exercises), a compact weight field in kg. The keyboard
+has to open numeric, and comma and period have to work identically.
 
-Внизу — кнопка завершения тренировки. Она не «сохраняет» (всё уже сохранено), а закрывает тренировку и переводит её в историю. Неактивна, пока не отмечен ни один подход.
+After a set is marked, the reps editor for that set opens immediately: the program's value is
+pre-filled, and the user can change it (did 6 instead of 8) and confirm. The default has to be
+right in most cases, so that editing is the exception rather than a mandatory step.
 
-Выход из тренировки без завершения не должен происходить от случайного касания и не должен удалять данные: тренировка остаётся незавершённой и доступной для продолжения.
+Tapping a marked set again unmarks it.
 
-### 4.4. Экран прогресса
+At the bottom, a button to finish the workout. It does not "save" (everything is saved
+already) — it closes the workout and moves it into history. It is disabled until at least one
+set is marked.
 
-Для каждого упражнения с весом, по которому есть минимум две тренировки, — компактный график лучшего рабочего веса по датам. Подпись: название упражнения и текущий максимум. На графике выделена рекордная точка. По краям — даты первой и последней тренировки.
+Leaving a workout without finishing it must not happen from an accidental touch and must not
+delete data: the workout stays unfinished and available to resume.
 
-Ниже — список последних тренировок: день, дата, количество подходов.
+### 4.4. Progress screen
 
-Если данных мало — понятное объяснение, когда появятся графики, а не пустой экран.
+For every weighted exercise with at least two workouts, a compact chart of best working weight
+by date. Caption: the exercise's name and the current best. The record point is highlighted.
+At the edges, the dates of the first and last workout.
 
-## 5. Дизайн
+Below that, a list of recent workouts: day, date, number of sets.
 
-**Настроение:** инструмент, а не фитнес-приложение из магазина. Никакой мотивации, бейджей, стриков, поздравлений и восклицательных знаков. Спокойно, плотно, функционально.
+If there is too little data, a clear explanation of when charts will appear — not an empty
+screen.
 
-**Тёмная тема — обязательна и единственна.** Приложение открывают в зале, часто при плохом свете; светлый экран бьёт по глазам между подходами.
+## 5. Design
 
-**Палитра** (текущая, менять можно, но характер сохранить):
-- фон: почти чёрный с холодным оттенком (`#101216`)
-- карточки: на тон светлее (`#181B21`), поля ввода ещё светлее (`#1F232B`)
-- границы: приглушённые (`#2A2F39`)
-- основной текст: почти белый (`#E8EAEE`), второстепенный — серо-синий (`#8A93A3`)
-- акцент навигации и графиков: приглушённый стальной синий (`#8FB4D9`)
-- достижение, рекорд, предупреждение: янтарный (`#E8B44C`)
-- выполнено, успех: приглушённый зелёный (`#6FCF8E`)
-- ошибка: приглушённый красный
+**Mood:** a tool, not a fitness app from a store. No motivation, no badges, no streaks, no
+congratulations, no exclamation marks. Calm, dense, functional.
 
-Цвет несёт смысл, а не украшает: зелёный = сделано и сохранено, янтарный = внимание или рекорд, красный = проблема. Ничего не должно быть зелёным «просто так».
+**Dark theme is mandatory and the only one.** The app is opened at the gym, often in poor
+light; a bright screen hurts between sets.
 
-**Типографика:** системный шрифт устройства (на iPhone — San Francisco). Заголовки экранов — крупные, плотные, прописными. Названия упражнений — заметно крупнее и жирнее схем и подписей. Внутри карточки должна быть отчётливая иерархия: название → схема → прошлый результат → подходы.
+**Palette** (current; it may change, but keep the character):
 
-**Компоновка:** одна колонка, максимум ~480 px по ширине, по центру. Карточки со скруглением ~16 px, внутренние отступы просторные. Между карточками — воздух. Никаких боковых меню, вкладок снизу, модальных окон.
+- background: near-black with a cool cast (`#101216`)
+- cards: one shade lighter (`#181B21`), input fields lighter still (`#1F232B`)
+- borders: muted (`#2A2F39`)
+- primary text: near-white (`#E8EAEE`), secondary: grey-blue (`#8A93A3`)
+- navigation and chart accent: muted steel blue (`#8FB4D9`)
+- achievement, record, warning: amber (`#E8B44C`)
+- done, success: muted green (`#6FCF8E`)
+- error: muted red
 
-**Размеры касаний:** кнопка подхода не меньше 52×52 px. Всё, что нажимается во время тренировки, должно попадаться пальцем с первого раза. Подсветка при нажатии отключена (стандартная серая вспышка мобильного Safari выглядит дёшево), вместо неё — плавная смена состояния.
+Colour carries meaning rather than decorating: green = done and saved, amber = attention or a
+record, red = a problem. Nothing should be green just because.
 
-**Анимация:** только функциональная и короткая (изменение состояния кнопки, полоса прогресса). Никаких появлений, отскоков, конфетти.
+**Typography:** the device's system font (San Francisco on iPhone). Screen headings are large,
+tight and uppercase. Exercise names are noticeably larger and heavier than schemes and
+captions. Inside a card there has to be a distinct hierarchy: name → scheme → last result →
+sets.
 
-**Тексты интерфейса:** русский, без обращений на «ты», без восклицаний, без слов «отлично», «супер», «молодец». Единицы — кг и метры. Даты — коротко («14 июл»).
+**Layout:** a single column, at most ~480 px wide, centred. Cards with ~16 px rounding and
+generous inner padding. Air between cards. No side menus, no bottom tabs, no modals.
 
-## 6. Условия эксплуатации
+**Touch targets:** the set button is no smaller than 52×52 px. Everything pressed during a
+workout has to be hit on the first try. The tap highlight is disabled (mobile Safari's standard
+grey flash looks cheap); a smooth state change stands in for it.
 
-- Основное устройство — iPhone, Safari, добавлено на главный экран и работает в полноэкранном режиме без адресной строки.
-- Связь в зале может быть плохой или отсутствовать. Идеально — работа офлайн с досылкой данных при появлении сети; при любом раскладе потеря отмеченного подхода недопустима.
-- Должно открываться и на компьютере — для разбора статистики.
-- Приложение доступно публично по адресу в интернете, поэтому защита паролем и ограничение перебора обязательны.
+**Animation:** functional and short only (a button's state change, the progress bar). No
+entrances, no bounces, no confetti.
 
-## 7. Данные пользователя
+**Interface copy:** Russian, no informal address ("ты"), no exclamations, none of "отлично",
+"супер", "молодец". Units are kg and metres. Dates are short ("14 июл").
 
-- Полная выгрузка всех тренировок в машиночитаемом виде — по требованию пользователя, одной кнопкой. Это одновременно бэкап и материал для внешнего анализа прогресса.
-- Регулярное автоматическое резервное копирование хранилища.
-- Удаление данных — только по явному действию пользователя.
+## 6. Operating conditions
 
-## 8. Развитие (учитывать в архитектуре, не реализовывать сразу)
+- The primary device is an iPhone, Safari, added to the home screen and running full-screen
+  with no address bar.
+- Connectivity at the gym may be poor or absent. Ideally: working offline with catch-up sync
+  when the network returns; under any circumstances, losing a marked set is unacceptable.
+- It also has to open on a computer — for going through the statistics.
+- The application is publicly reachable at an address on the internet, so password protection
+  and brute-force limiting are mandatory.
 
-- Второй пользователь со своей программой и своей историей.
-- Смена программы без правки кода.
-- Таймер отдыха между подходами (разное время для базовых и вспомогательных упражнений).
-- Подсказка рекомендуемого веса: если в прошлый раз выполнен верх диапазона повторов во всех подходах — предложить прибавку.
-- Статистика недельного объёма по мышечным группам.
-- Заметки к тренировке (самочувствие, состояние поясницы).
+## 7. User data
 
-## 9. Чего в приложении быть не должно
+- A complete export of all workouts in machine-readable form, on the user's request, from one
+  button. This doubles as a backup and as material for analysing progress elsewhere.
+- Regular automatic backups of the storage.
+- Deleting data only by an explicit action of the user.
 
-- Соцфункций, лент, обмена достижениями.
-- Геймификации: очков, уровней, серий, наград.
-- Рекламы и аналитики, отправляющей данные третьим лицам.
-- Больших библиотек упражнений и конструкторов программ — программа задаётся один раз и меняется редко.
-- Обязательной регистрации через веб — пользователи заводятся вручную.
+## 8. Future work (account for it in the architecture; do not implement yet)
+
+- A second user with their own program and their own history.
+- Changing the program without editing code.
+- A rest timer between sets (different durations for compound and accessory exercises).
+- A suggested-weight hint: if last time the top of the rep range was hit on every set, propose
+  an increase.
+- Weekly volume statistics per muscle group.
+- Notes on a workout (how you felt, the state of your lower back).
+
+## 9. What must not be in the application
+
+- Social features, feeds, sharing achievements.
+- Gamification: points, levels, streaks, rewards.
+- Advertising, and analytics that send data to third parties.
+- Large exercise libraries and program builders — the program is set once and changes rarely.
+- Mandatory web registration — users are created by hand.

@@ -54,9 +54,9 @@ export function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
 
         <div class="field-error">{error}</div>
 
-        {/* Хранилище приложения с главного экрана отделено от Safari, поэтому внутри
-            установленного приложения вход спрашивается ещё раз. Без этой строки
-            вечер уходит на отладку не-бага. */}
+        {/* A home-screen app's storage is separate from Safari's, so the login is asked
+            for once more inside the installed app. Without this line, an evening goes
+            into debugging a non-bug. */}
         <p class="login-note">
           Приложение, добавленное на экран «Домой», хранит вход отдельно от Safari — там
           пароль спросят один раз заново. Дальше он не понадобится месяцами.

@@ -1,5 +1,5 @@
 /* The palette. Colour here carries meaning rather than decorating:
-   зелёный — сделано и сохранено, янтарный — внимание или рекорд, красный — проблема.
+   green = done and saved, amber = attention or a record, red = a problem.
    Nothing should be green just because. */
 :root {
   color-scheme: dark;

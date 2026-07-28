@@ -1,86 +1,89 @@
-# Трекер тренировок
+# Gym tracker
 
-Личное приложение для записи силовых тренировок в зале, с телефона. Требования —
-в [CONTEXT.md](CONTEXT.md), развёртывание — в [deploy/README.md](deploy/README.md).
+A personal application for recording strength workouts at the gym, from a phone. The
+requirements live in [CONTEXT.md](CONTEXT.md), deployment in [deploy/README.md](deploy/README.md).
 
-Один статический бинарник: внутри уже лежат фронтенд, миграции базы и получение
-TLS-сертификатов. На сервере не нужны ни nginx, ни certbot, ни Python, ни Node, ни sqlite3.
+One static binary: the frontend, the database migrations and TLS certificate issuance are
+already inside it. The server needs no nginx, no certbot, no Python, no Node and no sqlite3.
 
-## Устройство
+The interface is in Russian — everything else, code and docs, is in English.
 
-| Слой | Чем сделано |
+## How it is built
+
+| Layer | Built with |
 |---|---|
-| Бэкенд | Go, SQLite через `modernc.org/sqlite` (без cgo) |
-| TLS | `autocert` прямо в процессе: сертификаты Let's Encrypt по tls-alpn-01 |
-| Фронтенд | TypeScript + Preact + Vite, вшивается в бинарник через `go:embed` |
-| Хранилище на клиенте | IndexedDB — источник правды для отрисовки |
-| Графики | свой inline SVG, без библиотек |
+| Backend | Go, SQLite via `modernc.org/sqlite` (no cgo) |
+| TLS | `autocert` in-process: Let's Encrypt certificates over tls-alpn-01 |
+| Frontend | TypeScript + Preact + Vite, embedded into the binary via `go:embed` |
+| Client-side storage | IndexedDB — the source of truth for rendering |
+| Charts | hand-rolled inline SVG, no libraries |
 
-**Приложение офлайн-первое.** Интерфейс читает только из IndexedDB и никогда напрямую
-из ответа сети; сервер — источник долговременной правды, а сеть работает фоновым
-согласователем. Отдельного «офлайн-режима» нет, потому что путь кода один и тот же.
+**The application is offline-first.** The UI reads only from IndexedDB and never straight
+from a network response; the server is the durable source of truth, and the network works as
+a background reconciler. There is no separate "offline mode", because the code path is the
+same either way.
 
-Каждое действие пишет новое состояние и ставит операцию в очередь **одной транзакцией**,
-после чего очередь разбирается в фоне. Сервер применяет батч тоже одной транзакцией,
-с журналом идемпотентности и слиянием last-write-wins, поэтому повтор, перестановка
-и разбиение батча дают один и тот же результат.
+Every action writes the new state and enqueues an operation in **one transaction**, after
+which the queue drains in the background. The server applies a batch in one transaction too,
+with an idempotence ledger and last-write-wins merging, so a retry, a reordering and a split
+of the batch all produce the same result.
 
-## Требуется
+## Requirements
 
 - Go 1.24+
 - Node 20+
 
-## Разработка
+## Development
 
 ```bash
-make dev                     # сервер на 127.0.0.1:8071
-npm --prefix web run dev     # фронтенд на 5173, /api проксируется в Go
+make dev                     # server on 127.0.0.1:8071
+npm --prefix web run dev     # frontend on 5173, /api proxied to Go
 ```
 
-Первый пользователь:
+The first user:
 
 ```bash
-go run ./cmd/gymtracker adduser igor --admin --name=Игорь
+go run ./cmd/gymtracker adduser igor --admin --name=Igor
 ```
 
-Программа лежит в `programs/<имя-пользователя>.json` — у каждого своя.
+A program lives in `programs/<username>.json` — everyone has their own.
 
-## Сборка и проверки
+## Building and checks
 
 ```bash
-make build     # бинарник для текущей платформы
-make release   # бинарник для сервера (Linux amd64)
-make test      # тесты Go и фронтенда
-make e2e       # сквозной сценарий в браузере: офлайн, перезапуск, досылка
-make check     # форматирование, go vet, типы
+make build     # binary for the current platform
+make release   # binary for the server (Linux amd64)
+make test      # Go and frontend tests
+make e2e       # end-to-end browser scenario: offline, restart, catch-up sync
+make check     # formatting, go vet, types
 ```
 
-## Что где
+## What lives where
 
 ```
-cmd/gymtracker/        точка входа и подкоманды: adduser, import, version
+cmd/gymtracker/        entry point and subcommands: adduser, import, version
 internal/
-  db/                  два пула соединений, прагмы, встроенные миграции
-  store/sync.go        ядро синхронизации: идемпотентность, LWW, разбор конфликтов
-  store/changes.go     дельта-выборка по курсору
-  program/             загрузка, валидация и хеширование программ
-  api/                 маршруты, аутентификация, ограничение перебора
-  backup/              копии через VACUUM INTO с проверкой целостности
-  server/              слушатели: обычный и TLS с автоматическими сертификатами
-  web/                 отдача вшитого фронтенда
+  db/                  two connection pools, pragmas, embedded migrations
+  store/sync.go        the sync core: idempotence, LWW, conflict resolution
+  store/changes.go     cursor-based delta selection
+  program/             loading, validating and hashing programs
+  api/                 routes, authentication, brute-force limiting
+  backup/              backups via VACUUM INTO with an integrity check
+  server/              listeners: plain, and TLS with automatic certificates
+  web/                 serving the embedded frontend
 web/src/
-  db/idb.ts            атомарная транзакция «состояние + очередь»
-  db/merge.ts          правила слияния, зеркальные серверным
-  sync/engine.ts       разбор очереди, бэкофф, статус сохранения
-  ui/                  экраны
-testdata/merge_cases.json   общая таблица истины для Go и TypeScript
-programs/              программы тренировок, по файлу на пользователя
-deploy/                systemd-юнит и инструкция по развёртыванию
+  db/idb.ts            the atomic "state + queue" transaction
+  db/merge.ts          merge rules, mirroring the server's
+  sync/engine.ts       queue draining, backoff, save status
+  ui/                  screens
+testdata/merge_cases.json   truth table shared by Go and TypeScript
+programs/              training programs, one file per user
+deploy/                systemd unit and deployment instructions
 ```
 
-## Правило, которое нельзя нарушать
+## The rule you must not break
 
-`exercise_id` вечен. К нему привязана вся история и все графики. Меняете упражнение —
-заводите новый id; освободившийся никогда не переиспользуйте, иначе в один график
-склеятся присед и жим. История при этом не пострадает в любом случае: каждая тренировка
-хранит хеш программы, по которой была записана, и рисуется её снапшотом.
+`exercise_id` is forever. All history and every chart hang off it. Change an exercise and you
+create a new id; never reuse a freed one, or a squat and a bench press will be glued into one
+chart. History survives either way: every workout stores the hash of the program it was
+recorded against and is rendered from that snapshot.

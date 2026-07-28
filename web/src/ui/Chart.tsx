@@ -50,7 +50,7 @@ export function Sparkline({ points }: { points: ProgressPoint[] }) {
         role="img"
         aria-label={`Лучший рабочий вес: с ${fmtWeight(first.weight)} кг (${fmtDate(first.at)}) до ${fmtWeight(last.weight)} кг (${fmtDate(last.at)}), максимум ${fmtWeight(max)} кг`}
       >
-        {/* Ось намеренно едва заметна: она ориентир, а не содержание. */}
+        {/* The axis is deliberately faint: it is a reference, not content. */}
         <line x1="0" y1={H - 1} x2={W} y2={H - 1} class="chart-axis" />
 
         <path d={path} class="chart-line" fill="none" />
@@ -61,7 +61,7 @@ export function Sparkline({ points }: { points: ProgressPoint[] }) {
           ),
         )}
 
-        {/* Кольцо цветом подложки отделяет рекордную точку от линии, если она лежит на ней. */}
+        {/* A surface-coloured ring separates the record point from the line when it sits on it. */}
         <circle
           cx={x(recordIndex)}
           cy={y(max)}
