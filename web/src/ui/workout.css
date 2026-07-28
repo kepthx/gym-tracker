@@ -107,19 +107,22 @@
   border-color: var(--accent);
 }
 
-.reps-editor {
-  position: relative;
-}
-
+/* Geometry copied from .set-btn, because it stands in that exact square: any difference in
+   size or radius would show up as a jump at the moment of the tap. */
 .reps-field {
   width: var(--tap);
-  height: 38px;
+  height: var(--tap);
   padding: 0 4px;
   text-align: center;
-  border-radius: 9px;
+  border-radius: 12px;
+  /* Green fill because the set is already counted — the editor only ever opens on a set
+     that the tap has just marked — and an accent border because it is being edited. Losing
+     the green while typing would take back the one thing the tap had just confirmed. */
   border: 1px solid var(--accent);
-  background: var(--field);
+  background: var(--done-fill);
   color: var(--text);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
 
 .reps-field:focus {

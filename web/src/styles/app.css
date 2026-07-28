@@ -92,6 +92,22 @@ textarea {
   flex: 1;
 }
 
+/* An open confirmation takes over the whole header row: it is a question with two
+   answers, and nothing else in the row competes with it until it is answered. The
+   question stretches so the buttons sit at the edge, where the thumb already is. */
+.topbar-row .confirm {
+  flex: 1;
+  flex-wrap: nowrap;
+}
+
+.topbar-row .confirm-question {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .status-line {
   color: var(--muted);
   font-size: 13px;

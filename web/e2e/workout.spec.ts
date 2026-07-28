@@ -32,12 +32,18 @@ test('тренировка переживает офлайн и перезапу
   })
 
   const setButtons = page.getByRole('button', { name: /^Подход \d$/ })
+  const repsEditor = page.locator('.reps-field')
 
   await test.step('отметить шесть подходов без связи', async () => {
     for (let i = 0; i < 6; i++) {
       await setButtons.nth(i).click()
-      // The reps editor opens after the mark; dismiss it with a tap elsewhere.
+      // The reps editor opens after the mark and makes its card taller, which shifts the
+      // cards below it. Wait for it to take focus and then to go away: pressing Enter
+      // before it is focused leaves it open, and the next set button then moves out from
+      // under the click while the card is collapsing back.
+      await expect(repsEditor).toBeFocused()
       await page.keyboard.press('Enter')
+      await expect(repsEditor).toHaveCount(0)
     }
     // With no connection this is NOT an error: the data is on the device, and the indicator
     // has to read as success.

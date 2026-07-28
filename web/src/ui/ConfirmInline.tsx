@@ -14,20 +14,29 @@ export function ConfirmInline({
   confirmLabel,
   danger,
   onConfirm,
+  onOpenChange,
 }: {
   label: string
   question: string
   confirmLabel: string
   danger?: boolean
   onConfirm: () => void
+  /** Reports the open state: expanded, the question needs far more room than the button
+      it replaced, and a cramped row may have to give up neighbours to make space. */
+  onOpenChange?: (open: boolean) => void
 }) {
   const [open, setOpen] = useState(false)
+
+  function toggle(next: boolean) {
+    setOpen(next)
+    onOpenChange?.(next)
+  }
 
   if (!open) {
     return (
       <button
         class={`btn btn-quiet ${danger ? 'confirm-danger' : ''}`}
-        onClick={() => setOpen(true)}
+        onClick={() => toggle(true)}
       >
         {label}
       </button>
@@ -40,13 +49,13 @@ export function ConfirmInline({
       <button
         class={`btn btn-quiet ${danger ? 'confirm-danger' : ''}`}
         onClick={() => {
-          setOpen(false)
+          toggle(false)
           onConfirm()
         }}
       >
         {confirmLabel}
       </button>
-      <button class="btn btn-quiet" onClick={() => setOpen(false)}>
+      <button class="btn btn-quiet" onClick={() => toggle(false)}>
         Отмена
       </button>
     </div>

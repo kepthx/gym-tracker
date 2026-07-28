@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
 const PASSWORD = process.env.E2E_PASSWORD ?? 'очень-секретный-пароль'
 const DIR = process.env.SHOTS_DIR ?? 'shots'
@@ -13,6 +13,17 @@ test.skip(!process.env.SHOTS, 'снимки экрана делаются тол
 test('снимки экранов', async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 852 })
 
+  const setButtons = page.getByRole('button', { name: /^Подход \d$/ })
+  const repsEditor = page.locator('.reps-field')
+
+  /** Marks a set and closes the reps editor before the card below it stops moving. */
+  const markSet = async (nth: number) => {
+    await setButtons.nth(nth).click()
+    await expect(repsEditor).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(repsEditor).toHaveCount(0)
+  }
+
   await page.goto('/')
   await page.screenshot({ path: `${DIR}/1-login.png` })
 
@@ -25,14 +36,12 @@ test('снимки экранов', async ({ page }) => {
   await page.getByRole('button', { name: /1\. Жим/ }).click()
   const weights = ['80', '80', '82,5']
   for (let i = 0; i < 3; i++) {
-    await page.getByRole('button', { name: /^Подход \d$/ }).nth(i).click()
-    await page.keyboard.press('Enter')
+    await markSet(i)
     await page.getByPlaceholder('кг').nth(i).fill(weights[i]!)
     await page.getByPlaceholder('кг').nth(i).blur()
   }
   // The plank is an unweighted exercise: there must be no weight field under its buttons.
-  await page.getByRole('button', { name: /^Подход \d$/ }).nth(16).click()
-  await page.keyboard.press('Enter')
+  await markSet(16)
   await page.screenshot({ path: `${DIR}/3-workout.png`, fullPage: true })
 
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
@@ -41,8 +50,7 @@ test('снимки экранов', async ({ page }) => {
   // A second workout on the same day: now the last result and the record are visible.
   await page.getByRole('button', { name: /1\. Жим/ }).click()
   for (let i = 0; i < 3; i++) {
-    await page.getByRole('button', { name: /^Подход \d$/ }).nth(i).click()
-    await page.keyboard.press('Enter')
+    await markSet(i)
     await page.getByPlaceholder('кг').nth(i).fill(i === 2 ? '85' : '82,5')
     await page.getByPlaceholder('кг').nth(i).blur()
   }

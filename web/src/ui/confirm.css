@@ -3,6 +3,7 @@
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .confirm-question {
@@ -11,6 +12,15 @@
   margin-right: 2px;
 }
 
-.confirm-danger {
+/* The question gives up room first. A tap target that has shrunk is a missed tap;
+   a question shortened by an ellipsis is still answered by the two buttons under it. */
+.confirm .btn {
+  flex: none;
+}
+
+/* Qualified by .btn on purpose: .btn-quiet sets a colour of its own at the same
+   specificity and, coming later in the bundle, would otherwise win — leaving the
+   destructive action the same grey as «Отмена». */
+.btn.confirm-danger {
   color: var(--error);
 }

@@ -17,6 +17,7 @@ import './workout.css'
 
 export function WorkoutScreen({ sessionID }: { sessionID: string }) {
   const state = getState()
+  const [confirmingExit, setConfirmingExit] = useState(false)
   const session = state.sessions.find((s) => s.id === sessionID)
 
   if (!session) {
@@ -45,13 +46,21 @@ export function WorkoutScreen({ sessionID }: { sessionID: string }) {
             label="← Выйти"
             question="Выйти без завершения?"
             confirmLabel="Выйти"
+            onOpenChange={setConfirmingExit}
             onConfirm={() => navigate({ name: 'home' })}
           />
-          <div class="spacer" />
-          <span class="workout-counter">
-            {done}/{total}
-          </span>
-          <SaveStatusChip />
+          {/* While the question is up it gets the row to itself. The question and its two
+              buttons do not fit beside the counter and the chip, and letting them wrap
+              tore the header into three lines with the counter stranded in the middle. */}
+          {!confirmingExit && (
+            <>
+              <div class="spacer" />
+              <span class="workout-counter">
+                {done}/{total}
+              </span>
+              <SaveStatusChip />
+            </>
+          )}
         </div>
         <div class="col">
           <div class="workout-day">{day ? day.name : session.day_id}</div>
@@ -203,13 +212,37 @@ function SetColumn({
 
   return (
     <div class="set-col">
-      <button
-        class={`set-btn ${done ? 'set-btn-done' : ''}`}
-        onClick={toggle}
-        aria-label={`Подход ${idx + 1}`}
-      >
-        {done ? (row?.reps ?? exercise.default_reps) : '—'}
-      </button>
+      {/* The editor takes the button's own place rather than opening below it: the value is
+          typed where the finger already is, and the column keeps its height, so nothing
+          under it jumps while the keyboard is coming up. */}
+      {editing && done ? (
+        <RepsEditor
+          label={`Повторения, подход ${idx + 1}`}
+          placeholder={row?.reps ?? exercise.default_reps}
+          onDone={(reps) => {
+            onEdit(null)
+            // An empty field means "leave what the tap wrote": the default is already
+            // saved, so the usual case — the default was right — takes no typing and no
+            // clearing. Only a typed value is a change worth writing.
+            if (reps === '') return
+            if (reps !== (row?.reps ?? '')) {
+              void upsertSet(sessionID, exercise.id, idx, {
+                done: true,
+                weight: row?.weight ?? null,
+                reps,
+              })
+            }
+          }}
+        />
+      ) : (
+        <button
+          class={`set-btn ${done ? 'set-btn-done' : ''}`}
+          onClick={toggle}
+          aria-label={`Подход ${idx + 1}`}
+        >
+          {done ? (row?.reps ?? exercise.default_reps) : '—'}
+        </button>
+      )}
 
       {exercise.weighted && (
         <WeightField
@@ -220,22 +253,6 @@ function SetColumn({
               weight,
               reps: row?.reps ?? null,
             })
-          }}
-        />
-      )}
-
-      {editing && done && (
-        <RepsEditor
-          initial={row?.reps ?? exercise.default_reps}
-          onDone={(reps) => {
-            onEdit(null)
-            if (reps !== (row?.reps ?? '')) {
-              void upsertSet(sessionID, exercise.id, idx, {
-                done: true,
-                weight: row?.weight ?? null,
-                reps,
-              })
-            }
           }}
         />
       )}
@@ -294,38 +311,48 @@ function WeightField({
   )
 }
 
+/**
+ * The reps editor.
+ *
+ * It stands exactly where the set button was, in the same square, and opens EMPTY with the
+ * default shown as a placeholder rather than as text. The default is already saved by the
+ * tap, so the common case — it was right — needs no typing, and the rare case needs no
+ * clearing first. Pre-filled text would have to be deleted every time it is wrong, which is
+ * the one moment when hands are chalked and patience is short.
+ */
 function RepsEditor({
-  initial,
+  label,
+  placeholder,
   onDone,
 }: {
-  initial: string
+  label: string
+  placeholder: string
   onDone: (reps: string) => void
 }) {
-  const [text, setText] = useState(initial)
+  const [text, setText] = useState('')
   const ref = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     ref.current?.focus()
-    ref.current?.select()
   }, [])
 
   return (
-    <div class="reps-editor">
-      <input
-        ref={ref}
-        /* Reps are text: they can be «12», «8/нога», «30с», «40м». */
-        type="text"
-        inputMode="text"
-        enterKeyHint="done"
-        autocomplete="off"
-        class="reps-field"
-        value={text}
-        onInput={(e) => setText((e.currentTarget as HTMLInputElement).value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') onDone(text.trim())
-        }}
-        onBlur={() => onDone(text.trim())}
-      />
-    </div>
+    <input
+      ref={ref}
+      /* Reps are text: they can be «12», «8/нога», «30с», «40м». */
+      type="text"
+      inputMode="text"
+      enterKeyHint="done"
+      autocomplete="off"
+      class="reps-field"
+      aria-label={label}
+      placeholder={placeholder}
+      value={text}
+      onInput={(e) => setText((e.currentTarget as HTMLInputElement).value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onDone(text.trim())
+      }}
+      onBlur={() => onDone(text.trim())}
+    />
   )
 }
