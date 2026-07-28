@@ -1,0 +1,71 @@
+/*
+ * Service worker: the app shell only.
+ *
+ * The prime rule is NEVER to touch /api/*. A cached API response is indistinguishable in
+ * the UI from fresh data, and showing yesterday's workout as today's is the worst thing
+ * that could happen here. All data lives in IndexedDB, and it gets there only through an
+ * explicit sync.
+ *
+ * The outbox queue does not live here either: Background Sync does not exist on iOS, so a
+ * worker would gain nothing while adding a second copy of the state.
+ */
+
+const SHELL = 'shell-v1'
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(SHELL).then((cache) => cache.addAll(['/'])).then(() => self.skipWaiting()),
+  )
+})
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((names) => Promise.all(names.filter((n) => n !== SHELL).map((n) => caches.delete(n))))
+      .then(() => self.clients.claim()),
+  )
+})
+
+self.addEventListener('fetch', (event) => {
+  const request = event.request
+  if (request.method !== 'GET') return
+
+  const url = new URL(request.url)
+  if (url.origin !== self.location.origin) return
+  // Under no circumstances.
+  if (url.pathname.startsWith('/api/')) return
+
+  // Build output carries a content hash in the filename, so those files are immutable:
+  // serving them from cache is safe, and safe forever.
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      caches.match(request).then(
+        (hit) =>
+          hit ??
+          fetch(request).then((response) => {
+            if (response.ok) {
+              const copy = response.clone()
+              void caches.open(SHELL).then((cache) => cache.put(request, copy))
+            }
+            return response
+          }),
+      ),
+    )
+    return
+  }
+
+  // The shell: network first, so an update arrives right away, cache on failure.
+  // Without this the app would not open at the gym with no signal.
+  event.respondWith(
+    fetch(request)
+      .then((response) => {
+        if (response.ok) {
+          const copy = response.clone()
+          void caches.open(SHELL).then((cache) => cache.put('/', copy))
+        }
+        return response
+      })
+      .catch(() => caches.match(request).then((hit) => hit ?? caches.match('/'))),
+  )
+})

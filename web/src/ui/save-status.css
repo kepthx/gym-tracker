@@ -1,0 +1,49 @@
+.chip {
+  font-size: 12px;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.chip-muted {
+  color: var(--muted);
+}
+
+/* Amber, not red: a queue with no signal is success — just local success, for now. */
+.chip-local {
+  color: var(--record);
+}
+
+.chip-error {
+  color: var(--error);
+  font-weight: 600;
+}
+
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px var(--pad);
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+
+.alert-error {
+  background: var(--error-fill);
+  border-bottom-color: #4a2a2a;
+  color: var(--error);
+}
+
+.alert-notice {
+  background: var(--record-fill);
+  border-bottom-color: #4a3c17;
+  color: var(--record);
+}
+
+.alert-action {
+  color: inherit;
+  text-decoration: underline;
+  min-height: 32px;
+  padding: 0 4px;
+}

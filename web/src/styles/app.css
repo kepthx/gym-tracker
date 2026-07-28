@@ -1,0 +1,265 @@
+@import './tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  /* Mobile Safari's grey tap flash looks cheap; a smooth change of the button's own
+     state stands in for it. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden; /* kills rubber-band scrolling of the whole page */
+  overscroll-behavior: none;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.4;
+  -webkit-text-size-adjust: 100%;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior-y: contain; /* suppresses pull-to-refresh inside */
+  -webkit-overflow-scrolling: touch;
+}
+
+.col {
+  width: 100%;
+  max-width: var(--col);
+  margin: 0 auto;
+  padding: 0 var(--pad);
+}
+
+button,
+.tap {
+  touch-action: manipulation; /* removes the 300 ms double-tap delay */
+  -webkit-touch-callout: none;
+  user-select: none;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea {
+  user-select: text;
+  font-family: inherit;
+  /* Exactly 16 px is the only reliable way to stop iOS zooming on focus.
+     user-scalable=no must not be used for this. */
+  font-size: 16px;
+}
+
+/* --- header --- */
+
+.topbar {
+  padding-top: max(10px, var(--safe-top));
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  flex: none;
+}
+
+.topbar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 34px;
+}
+
+.topbar-title {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.status-line {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+/* --- cards --- */
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--pad);
+  margin-bottom: var(--gap);
+}
+
+.card-tap {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--pad);
+  margin-bottom: var(--gap);
+  transition: background var(--t), border-color var(--t);
+}
+
+.card-tap:active {
+  background: #1e222a;
+  border-color: #37404e;
+}
+
+.card-title {
+  font-size: 17px;
+  font-weight: 650;
+  margin: 0;
+}
+
+.card-sub {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.card-meta {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+/* --- buttons --- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--field);
+  font-size: 15px;
+  font-weight: 600;
+  transition: background var(--t), border-color var(--t), color var(--t);
+}
+
+.btn:active:not(:disabled) {
+  background: #262b34;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btn-primary {
+  background: var(--accent-fill);
+  border-color: #3a5670;
+  color: var(--accent);
+}
+
+.btn-wide {
+  width: 100%;
+}
+
+.btn-quiet {
+  background: none;
+  border-color: transparent;
+  color: var(--muted);
+  font-weight: 500;
+  min-height: 40px;
+  padding: 0 10px;
+}
+
+.btn-danger {
+  color: var(--error);
+  border-color: #4a2a2a;
+  background: var(--error-fill);
+}
+
+.btn-icon {
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0 10px;
+  background: none;
+  border-color: transparent;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+/* --- fields --- */
+
+.field {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--field);
+  color: var(--text);
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.field-error {
+  color: var(--error);
+  font-size: 14px;
+  margin-top: 10px;
+  min-height: 20px;
+}
+
+/* --- progress --- */
+
+.progress {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--done);
+  transition: width var(--t);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.empty {
+  color: var(--muted);
+  font-size: 14px;
+  padding: 28px var(--pad);
+  text-align: center;
+}
+
+.section-gap {
+  height: 22px;
+}

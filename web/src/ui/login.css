@@ -1,0 +1,17 @@
+.login {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: max(64px, calc(var(--safe-top) + 56px));
+}
+
+.login-title {
+  margin-bottom: 10px;
+}
+
+.login-note {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 18px 0 0;
+}

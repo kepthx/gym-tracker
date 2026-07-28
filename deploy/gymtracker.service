@@ -1,0 +1,49 @@
+[Unit]
+Description=Трекер тренировок
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=gymtracker
+Group=gymtracker
+WorkingDirectory=/opt/gymtracker
+ExecStart=/opt/gymtracker/gymtracker
+Restart=always
+RestartSec=3
+
+# The app listens on 80 and 443 itself and obtains its own certificates — no nginx, no
+# certbot. This capability lets it take privileged ports without running as root.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+# systemd creates the directory and hands it to the service. The certificate cache has to
+# be persistent: without it every restart orders a new certificate and runs into Let's
+# Encrypt's weekly limit (five identical certificates per seven days).
+StateDirectory=gymtracker
+StateDirectoryMode=0750
+
+Environment=GYM_DB=/var/lib/gymtracker/gymtracker.db
+Environment=GYM_BACKUP_DIR=/var/lib/gymtracker/backups
+Environment=GYM_CERT_DIR=/var/lib/gymtracker/autocert
+Environment=GYM_PROGRAMS=/opt/gymtracker/programs
+# Domain, email, and — on the first deployment — Let's Encrypt's staging directory.
+EnvironmentFile=/opt/gymtracker/.env
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target

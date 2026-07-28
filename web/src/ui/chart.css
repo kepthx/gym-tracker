@@ -1,0 +1,46 @@
+.chart {
+  margin: 12px 0 0;
+}
+
+.chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* The axis is barely visible — a reference, not content. */
+.chart-axis {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart-line {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-dot {
+  fill: var(--accent);
+}
+
+/* A ring in the card's colour: the record point stays legible even when the line passes
+   directly beneath it. */
+.chart-record-ring {
+  fill: var(--card);
+}
+
+.chart-record {
+  fill: var(--record);
+}
+
+.chart-dates {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}

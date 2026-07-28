@@ -1,0 +1,97 @@
+{
+  "_": "Общая таблица истины для слияния. Её читают и Go-тесты (internal/store/rowmerge_test.go), и Vitest (web/src/db/merge.test.ts). Расхождение двух реализаций слияния — самый опасный баг в системе, и один файл на обе стороны — единственный способ его удержать.",
+
+  "lww": [
+    { "name": "позже побеждает", "ts": 200, "device": "a", "cur_ts": 100, "cur_device": "z", "newer": true },
+    { "name": "раньше проигрывает", "ts": 100, "device": "z", "cur_ts": 200, "cur_device": "a", "newer": false },
+    { "name": "при равном времени побеждает больший идентификатор устройства", "ts": 100, "device": "phone", "cur_ts": 100, "cur_device": "ipad", "newer": true },
+    { "name": "сравнение устройств симметрично", "ts": 100, "device": "ipad", "cur_ts": 100, "cur_device": "phone", "newer": false },
+    { "name": "запись не новее самой себя", "ts": 100, "device": "phone", "cur_ts": 100, "cur_device": "phone", "newer": false },
+    { "name": "разница в миллисекунду решает", "ts": 101, "device": "a", "cur_ts": 100, "cur_device": "z", "newer": true }
+  ],
+
+  "sets": [
+    {
+      "name": "новой строки не было — берётся пришедшая",
+      "current": null,
+      "incoming": { "session_id": "s1", "exercise_id": "bench_bb", "idx": 0, "done": true, "weight": 80, "reps": "5", "deleted": false, "updated_ts": 100, "updated_by": "phone", "rev": 1 },
+      "expected": { "session_id": "s1", "exercise_id": "bench_bb", "idx": 0, "done": true, "weight": 80, "reps": "5", "deleted": false, "updated_ts": 100, "updated_by": "phone", "rev": 1 }
+    },
+    {
+      "name": "поздняя запись перекрывает раннюю целиком",
+      "current": { "session_id": "s1", "exercise_id": "bench_bb", "idx": 0, "done": true, "weight": 80, "reps": "5", "deleted": false, "updated_ts": 100, "updated_by": "phone", "rev": 1 },
+      "incoming": { "session_id": "s1", "exercise_id": "bench_bb", "idx": 0, "done": true, "weight": 82.5, "reps": "4", "deleted": false, "updated_ts": 200, "updated_by": "ipad", "rev": 2 },
+      "expected": { "session_id": "s1", "exercise_id": "bench_bb", "idx": 0, "done": true, "weight": 82.5, "reps": "4", "deleted": false, "updated_ts": 200, "updated_by": "ipad", "rev": 2 }
+    },
+    {
+      "name": "ранняя запись не перекрывает позднюю",
+      "current": { "session_id": "s1", "exercise_id": "bench_bb", "idx": 0, "done": true, "weight": 82.5, "reps": "4", "deleted": false, "updated_ts": 200, "updated_by": "ipad", "rev": 2 },
+      "incoming": { "session_id": "s1", "exercise_id": "bench_bb", "idx": 0, "done": true, "weight": 80, "reps": "5", "deleted": false, "updated_ts": 100, "updated_by": "phone", "rev": 1 },
+      "expected": { "session_id": "s1", "exercise_id": "bench_bb", "idx": 0, "done": true, "weight": 82.5, "reps": "4", "deleted": false, "updated_ts": 200, "updated_by": "ipad", "rev": 2 }
+    },
+    {
+      "name": "снятие отметки — обычная поздняя запись",
+      "current": { "session_id": "s1", "exercise_id": "bench_bb", "idx": 0, "done": true, "weight": 80, "reps": "5", "deleted": false, "updated_ts": 100, "updated_by": "phone", "rev": 1 },
+      "incoming": { "session_id": "s1", "exercise_id": "bench_bb", "idx": 0, "done": false, "weight": 80, "reps": null, "deleted": false, "updated_ts": 300, "updated_by": "phone", "rev": 3 },
+      "expected": { "session_id": "s1", "exercise_id": "bench_bb", "idx": 0, "done": false, "weight": 80, "reps": null, "deleted": false, "updated_ts": 300, "updated_by": "phone", "rev": 3 }
+    },
+    {
+      "name": "упражнение без веса остаётся без веса",
+      "current": null,
+      "incoming": { "session_id": "s1", "exercise_id": "plank", "idx": 0, "done": true, "weight": null, "reps": "40с", "deleted": false, "updated_ts": 100, "updated_by": "phone", "rev": 1 },
+      "expected": { "session_id": "s1", "exercise_id": "plank", "idx": 0, "done": true, "weight": null, "reps": "40с", "deleted": false, "updated_ts": 100, "updated_by": "phone", "rev": 1 }
+    },
+    {
+      "name": "ничья по времени решается устройством",
+      "current": { "session_id": "s1", "exercise_id": "bench_bb", "idx": 0, "done": true, "weight": 80, "reps": "5", "deleted": false, "updated_ts": 100, "updated_by": "ipad", "rev": 1 },
+      "incoming": { "session_id": "s1", "exercise_id": "bench_bb", "idx": 0, "done": true, "weight": 90, "reps": "3", "deleted": false, "updated_ts": 100, "updated_by": "phone", "rev": 2 },
+      "expected": { "session_id": "s1", "exercise_id": "bench_bb", "idx": 0, "done": true, "weight": 90, "reps": "3", "deleted": false, "updated_ts": 100, "updated_by": "phone", "rev": 2 }
+    }
+  ],
+
+  "sessions": [
+    {
+      "name": "новой тренировки не было — берётся пришедшая",
+      "current": null,
+      "incoming": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": null, "deleted": false, "note": "", "updated_ts": 100, "updated_by": "phone", "rev": 1 },
+      "expected": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": null, "deleted": false, "note": "", "updated_ts": 100, "updated_by": "phone", "rev": 1 }
+    },
+    {
+      "name": "завершение доезжает до незавершённой тренировки",
+      "current": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": null, "deleted": false, "note": "", "updated_ts": 100, "updated_by": "phone", "rev": 1 },
+      "incoming": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": 600, "deleted": false, "note": "", "updated_ts": 100, "updated_by": "phone", "rev": 2 },
+      "expected": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": 600, "deleted": false, "note": "", "updated_ts": 100, "updated_by": "phone", "rev": 2 }
+    },
+    {
+      "name": "из двух времён завершения остаётся наименьшее",
+      "_": "ничья по времени: 'ipad' лексикографически меньше 'phone', поэтому поля старта остаются от текущей записи, а время завершения всё равно берётся минимальное",
+      "current": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": 900, "deleted": false, "note": "", "updated_ts": 100, "updated_by": "phone", "rev": 2 },
+      "incoming": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": 600, "deleted": false, "note": "", "updated_ts": 100, "updated_by": "ipad", "rev": 3 },
+      "expected": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": 600, "deleted": false, "note": "", "updated_ts": 100, "updated_by": "phone", "rev": 3 }
+    },
+    {
+      "name": "порядок времён завершения не важен",
+      "current": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": 600, "deleted": false, "note": "", "updated_ts": 100, "updated_by": "ipad", "rev": 3 },
+      "incoming": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": 900, "deleted": false, "note": "", "updated_ts": 100, "updated_by": "phone", "rev": 2 },
+      "expected": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": 600, "deleted": false, "note": "", "updated_ts": 100, "updated_by": "phone", "rev": 3 }
+    },
+    {
+      "name": "удалённая тренировка не воскресает",
+      "current": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": null, "deleted": true, "note": "", "updated_ts": 300, "updated_by": "phone", "rev": 5 },
+      "incoming": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": null, "deleted": false, "note": "", "updated_ts": 100, "updated_by": "ipad", "rev": 1 },
+      "expected": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": null, "deleted": true, "note": "", "updated_ts": 300, "updated_by": "phone", "rev": 5 }
+    },
+    {
+      "name": "удаление доезжает и в обратном порядке",
+      "current": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": null, "deleted": false, "note": "", "updated_ts": 100, "updated_by": "ipad", "rev": 1 },
+      "incoming": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": null, "deleted": true, "note": "", "updated_ts": 300, "updated_by": "phone", "rev": 5 },
+      "expected": { "id": "s1", "date": "2026-07-28", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": null, "deleted": true, "note": "", "updated_ts": 300, "updated_by": "phone", "rev": 5 }
+    },
+    {
+      "name": "поля старта обновляются по последней записи",
+      "current": { "id": "s1", "date": "2026-07-27", "day_id": "d1", "program_hash": "a", "started_at": 100, "finished_at": null, "deleted": false, "note": "", "updated_ts": 100, "updated_by": "phone", "rev": 1 },
+      "incoming": { "id": "s1", "date": "2026-07-28", "day_id": "d2", "program_hash": "b", "started_at": 150, "finished_at": null, "deleted": false, "note": "", "updated_ts": 200, "updated_by": "ipad", "rev": 4 },
+      "expected": { "id": "s1", "date": "2026-07-28", "day_id": "d2", "program_hash": "b", "started_at": 150, "finished_at": null, "deleted": false, "note": "", "updated_ts": 200, "updated_by": "ipad", "rev": 4 }
+    }
+  ]
+}

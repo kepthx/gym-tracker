@@ -1,0 +1,16 @@
+.confirm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.confirm-question {
+  font-size: 14px;
+  color: var(--muted);
+  margin-right: 2px;
+}
+
+.confirm-danger {
+  color: var(--error);
+}

@@ -1,0 +1,52 @@
+.home-body {
+  padding-top: var(--gap);
+}
+
+.day-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.day-exercises {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* The unfinished workout is the only place amber appears on the home screen: it is a
+   state that needs attention, not decoration. */
+.draft {
+  border-color: #4a3c17;
+  background: linear-gradient(0deg, var(--card), var(--card)), var(--record-fill);
+}
+
+.draft-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--record);
+  margin-bottom: 6px;
+}
+
+.draft-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.home-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.home-footer .btn {
+  text-decoration: none;
+}

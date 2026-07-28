@@ -1,0 +1,131 @@
+.workout-counter {
+  font-size: 14px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.workout-day {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 6px 0 8px;
+}
+
+.workout-body {
+  padding-top: var(--gap);
+}
+
+.exercise-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* A distinct hierarchy inside the card: name → scheme → last result → sets. */
+.exercise .card-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.exercise-count {
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.record {
+  color: var(--record);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.last-result {
+  font-size: 13px;
+  color: var(--accent);
+  margin-top: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.last-result.muted {
+  color: var(--muted);
+}
+
+.set-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.set-col {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: var(--tap);
+}
+
+/* The primary interactive element: no smaller than 52 px, so a finger lands on it without
+   aiming — chalked up, between sets, without looking. */
+.set-btn {
+  width: var(--tap);
+  height: var(--tap);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--field);
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  padding: 0;
+  transition: background var(--t), border-color var(--t), color var(--t);
+}
+
+.set-btn-done {
+  background: var(--done-fill);
+  border-color: #2f6b46;
+  color: var(--done);
+}
+
+.weight-field {
+  width: var(--tap);
+  height: 38px;
+  padding: 0 4px;
+  text-align: center;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--field);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.weight-field:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.reps-editor {
+  position: relative;
+}
+
+.reps-field {
+  width: var(--tap);
+  height: 38px;
+  padding: 0 4px;
+  text-align: center;
+  border-radius: 9px;
+  border: 1px solid var(--accent);
+  background: var(--field);
+  color: var(--text);
+}
+
+.reps-field:focus {
+  outline: none;
+}
+
+.finish {
+  margin-top: 8px;
+}

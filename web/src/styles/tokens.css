@@ -1,0 +1,45 @@
+/* The palette. Colour here carries meaning rather than decorating:
+   зелёный — сделано и сохранено, янтарный — внимание или рекорд, красный — проблема.
+   Nothing should be green just because. */
+:root {
+  color-scheme: dark;
+
+  --bg: #101216;
+  --card: #181b21;
+  --field: #1f232b;
+  --border: #2a2f39;
+
+  --text: #e8eaee;
+  --muted: #8a93a3;
+
+  --accent: #8fb4d9; /* navigation and charts */
+  --record: #e8b44c; /* record, attention, "saved on device" */
+  --done: #6fcf8e; /* done, success */
+  --error: #d97070;
+
+  /* Muted fills for button and banner states. */
+  --done-fill: #1c3427;
+  --record-fill: #33290f;
+  --error-fill: #331a1a;
+  --accent-fill: #1b2836;
+
+  --radius: 16px;
+  --radius-sm: 10px;
+  --col: 480px;
+
+  --gap: 14px;
+  --pad: 16px;
+
+  /* The set button is the primary interactive element. No smaller than 52 px, so a
+     finger lands on it without aiming. */
+  --tap: 54px;
+
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto,
+    'Helvetica Neue', sans-serif;
+
+  /* Animation is functional and short, only. */
+  --t: 120ms ease-out;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}

@@ -1,0 +1,25 @@
+# frontend build output, embedded into the binary at go build time
+internal/web/dist/*
+!internal/web/dist/.gitkeep
+
+# the binary
+/gymtracker
+/dist/
+
+# data and backups — never in git
+/data/
+*.db
+*.db-wal
+*.db-shm
+*.db.gz
+
+# secrets
+.env
+
+# playwright output
+web/test-results/
+web/playwright-report/
+web/shots/
+
+node_modules/
+.DS_Store
