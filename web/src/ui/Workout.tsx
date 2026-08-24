@@ -4,6 +4,7 @@ import { getState, navigate, programFor } from '../state/store'
 import {
   bestWeight,
   doneCount,
+  isBetter,
   lastResult,
   setAt,
   setsOf,
@@ -122,12 +123,20 @@ function ExerciseCard({
   const done = doneCount(mine)
 
   const previous = lastResult(state.sessions, state.sets, exercise.id, sessionID)
-  const best = bestWeight(state.sessions, state.sets, exercise.id, sessionID)
+  // On an assisted machine the number is the help given, so the best result is the smallest.
+  const lowerIsBetter = exercise.lower_is_better === true
+  const best = bestWeight(state.sessions, state.sets, exercise.id, sessionID, lowerIsBetter)
   const todayBest = mine.reduce<number | null>(
-    (top, s) => (s.done && s.weight !== null && (top === null || s.weight > top) ? s.weight : top),
+    (top, s) =>
+      s.done && s.weight !== null && (top === null || isBetter(s.weight, top, lowerIsBetter))
+        ? s.weight
+        : top,
     null,
   )
-  const isRecord = exercise.weighted && todayBest !== null && (best === null || todayBest > best)
+  const isRecord =
+    exercise.weighted &&
+    todayBest !== null &&
+    (best === null || isBetter(todayBest, best, lowerIsBetter))
 
   return (
     <section class="card exercise">

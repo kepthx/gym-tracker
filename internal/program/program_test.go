@@ -243,3 +243,41 @@ func keys(m map[string]*Snapshot) []string {
 	}
 	return out
 }
+
+// TestLowerIsBetterDoesNotDisturbExistingHashes pins the omitempty on the field: a program
+// that never mentions lower_is_better has to hash exactly as it did before the field was
+// added. Otherwise introducing it would silently re-snapshot every existing program and
+// detach recorded history from the program it was trained by.
+func TestLowerIsBetterDoesNotDisturbExistingHashes(t *testing.T) {
+	absent, err := Parse("без флага", []byte(minimalValid))
+	if err != nil {
+		t.Fatalf("программа без флага отклонена: %v", err)
+	}
+
+	explicitFalse := strings.Replace(minimalValid,
+		`"weighted":true}`,
+		`"weighted":true,"lower_is_better":false}`, 1)
+	same, err := Parse("с явным false", []byte(explicitFalse))
+	if err != nil {
+		t.Fatalf("программа с явным false отклонена: %v", err)
+	}
+	if same.Hash != absent.Hash {
+		t.Errorf("явный lower_is_better=false изменил хеш:\n  без флага %s\n  с флагом  %s",
+			absent.Hash, same.Hash)
+	}
+
+	explicitTrue := strings.Replace(minimalValid,
+		`"weighted":true}`,
+		`"weighted":true,"lower_is_better":true}`, 1)
+	differs, err := Parse("с true", []byte(explicitTrue))
+	if err != nil {
+		t.Fatalf("программа с lower_is_better=true отклонена: %v", err)
+	}
+	if differs.Hash == absent.Hash {
+		t.Error("lower_is_better=true обязан давать другой снапшот, а хеш совпал")
+	}
+	ex, ok := differs.Program.Exercise("bench_bb")
+	if !ok || !ex.LowerIsBetter {
+		t.Error("флаг не долетел до разобранного упражнения")
+	}
+}

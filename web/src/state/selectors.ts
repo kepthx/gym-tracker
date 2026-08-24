@@ -77,12 +77,25 @@ export function lastResult(
   return null
 }
 
+/**
+ * Whether one result beats another for this exercise.
+ *
+ * On an assisted machine the recorded number is the help the machine gives, so progress
+ * runs downwards: 30 kg of assistance beats 35. Everything that decides "best" — the record
+ * marker, the chart's highlighted point, the caption — goes through here, because without
+ * it the app congratulates the user for going backwards.
+ */
+export function isBetter(candidate: number, current: number, lowerIsBetter = false): boolean {
+  return lowerIsBetter ? candidate < current : candidate > current
+}
+
 /** The all-time best working weight, excluding the current workout. */
 export function bestWeight(
   sessions: SessionRow[],
   sets: SetRow[],
   exerciseID: string,
   exceptSessionID: string,
+  lowerIsBetter = false,
 ): number | null {
   const alive = new Set(sessions.filter((s) => !s.deleted && s.id !== exceptSessionID).map((s) => s.id))
 
@@ -91,7 +104,7 @@ export function bestWeight(
     if (set.exercise_id !== exerciseID || !set.done || set.deleted) continue
     if (!alive.has(set.session_id)) continue
     if (set.weight === null) continue
-    if (best === null || set.weight > best) best = set.weight
+    if (best === null || isBetter(set.weight, best, lowerIsBetter)) best = set.weight
   }
   return best
 }
@@ -107,13 +120,16 @@ export function progressSeries(
   sessions: SessionRow[],
   sets: SetRow[],
   exerciseID: string,
+  lowerIsBetter = false,
 ): ProgressPoint[] {
   const bySession = new Map<string, number>()
 
   for (const set of sets) {
     if (set.exercise_id !== exerciseID || !set.done || set.deleted || set.weight === null) continue
     const best = bySession.get(set.session_id)
-    if (best === undefined || set.weight > best) bySession.set(set.session_id, set.weight)
+    if (best === undefined || isBetter(set.weight, best, lowerIsBetter)) {
+      bySession.set(set.session_id, set.weight)
+    }
   }
 
   const points: ProgressPoint[] = []
@@ -137,24 +153,38 @@ export function lastDoneAt(sessions: SessionRow[], dayID: string): number | null
 }
 
 /** Weighted exercises with at least two workouts — only those get a chart. */
+export interface Chartable {
+  id: string
+  name: string
+  points: ProgressPoint[]
+  lowerIsBetter: boolean
+}
+
 export function chartableExercises(
   sessions: SessionRow[],
   sets: SetRow[],
   programs: Map<string, Program>,
-): { id: string; name: string; points: ProgressPoint[] }[] {
-  const names = new Map<string, string>()
+): Chartable[] {
+  // The direction travels with the exercise rather than being looked up again downstream:
+  // an id may appear in several program snapshots, and the chart must not flip direction
+  // depending on which one happened to be read last.
+  const known = new Map<string, { name: string; lowerIsBetter: boolean }>()
   for (const program of programs.values()) {
     for (const day of program.days) {
       for (const exercise of day.exercises) {
-        if (exercise.weighted) names.set(exercise.id, exercise.name)
+        if (!exercise.weighted) continue
+        known.set(exercise.id, {
+          name: exercise.name,
+          lowerIsBetter: exercise.lower_is_better === true,
+        })
       }
     }
   }
 
-  const out: { id: string; name: string; points: ProgressPoint[] }[] = []
-  for (const [id, name] of names) {
-    const points = progressSeries(sessions, sets, id)
-    if (points.length >= 2) out.push({ id, name, points })
+  const out: Chartable[] = []
+  for (const [id, { name, lowerIsBetter }] of known) {
+    const points = progressSeries(sessions, sets, id, lowerIsBetter)
+    if (points.length >= 2) out.push({ id, name, points, lowerIsBetter })
   }
   return out.sort((a, b) => b.points.length - a.points.length)
 }

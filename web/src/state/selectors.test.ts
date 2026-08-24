@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   bestWeight,
   chartableExercises,
+  isBetter,
   draft,
   history,
   lastDoneAt,
@@ -228,5 +229,82 @@ describe('прочее', () => {
     ]
     expect(lastDoneAt(sessions, 'd1')).toBe(1 * DAY)
     expect(lastDoneAt(sessions, 'd3')).toBeNull()
+  })
+})
+
+describe('направление прогресса (тренажёр с противовесом)', () => {
+  // На гравитроне записывается помощь тренажёра: 30 кг лучше, чем 35. Если этого не
+  // учитывать, приложение поздравляет с рекордом за шаг назад.
+  const assisted: Program = {
+    version: 1,
+    name: 'Тест',
+    days: [
+      {
+        id: 'd2',
+        name: 'Тяга',
+        muscles: 'Спина',
+        exercises: [
+          {
+            id: 'pullup_assisted',
+            name: 'Подтягивания в гравитроне',
+            scheme: '4×8–10',
+            sets: 4,
+            default_reps: '8',
+            weighted: true,
+            lower_is_better: true,
+          },
+        ],
+      },
+    ],
+  }
+
+  it('isBetter разворачивается по флагу', () => {
+    expect(isBetter(85, 80)).toBe(true)
+    expect(isBetter(80, 85)).toBe(false)
+    expect(isBetter(30, 35, true)).toBe(true)
+    expect(isBetter(35, 30, true)).toBe(false)
+  })
+
+  it('лучший результат — наименьший вес', () => {
+    const sessions = [session('s1'), session('s2')]
+    const sets = [
+      set('s1', 'pullup_assisted', 0, { weight: 35 }),
+      set('s2', 'pullup_assisted', 0, { weight: 30 }),
+    ]
+    expect(bestWeight(sessions, sets, 'pullup_assisted', 'none', true)).toBe(30)
+    // Без флага та же выборка даёт противоположный ответ — это и была ошибка.
+    expect(bestWeight(sessions, sets, 'pullup_assisted', 'none')).toBe(35)
+  })
+
+  it('в серии за тренировку берётся наименьший вес', () => {
+    const sessions = [session('s1')]
+    const sets = [
+      set('s1', 'pullup_assisted', 0, { weight: 35 }),
+      set('s1', 'pullup_assisted', 1, { weight: 30 }),
+    ]
+    expect(progressSeries(sessions, sets, 'pullup_assisted', true)[0]!.weight).toBe(30)
+    expect(progressSeries(sessions, sets, 'pullup_assisted')[0]!.weight).toBe(35)
+  })
+
+  it('chartableExercises переносит направление из программы', () => {
+    const sessions = [session('s1'), session('s2', { started_at: 2000 })]
+    const sets = [
+      set('s1', 'pullup_assisted', 0, { weight: 35 }),
+      set('s2', 'pullup_assisted', 0, { weight: 30 }),
+    ]
+    const charts = chartableExercises(sessions, sets, new Map([['hash-a', assisted]]))
+    expect(charts).toHaveLength(1)
+    expect(charts[0]!.lowerIsBetter).toBe(true)
+  })
+
+  it('у обычного упражнения направление остаётся прежним', () => {
+    const sessions = [session('s1'), session('s2', { started_at: 2000 })]
+    const sets = [
+      set('s1', 'bench_bb', 0, { weight: 80 }),
+      set('s2', 'bench_bb', 0, { weight: 85 }),
+    ]
+    const charts = chartableExercises(sessions, sets, new Map([['hash-a', program]]))
+    expect(charts[0]!.lowerIsBetter).toBe(false)
+    expect(bestWeight(sessions, sets, 'bench_bb', 'none')).toBe(85)
   })
 })

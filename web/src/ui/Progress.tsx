@@ -1,5 +1,5 @@
 import { getState, navigate, programFor } from '../state/store'
-import { chartableExercises, doneCount, history, setsOf } from '../state/selectors'
+import { chartableExercises, doneCount, history, isBetter, setsOf } from '../state/selectors'
 import { Sparkline } from './Chart'
 import { fmtDate, fmtWeight, plural } from './format'
 import { SaveStatusBar } from './SaveStatus'
@@ -36,14 +36,18 @@ export function ProgressScreen() {
             </div>
           ) : (
             charts.map((chart) => {
-              const max = Math.max(...chart.points.map((p) => p.weight))
+              // Not Math.max: for an assisted exercise the best result is the smallest.
+              const best = chart.points.reduce(
+                (top, p) => (isBetter(p.weight, top, chart.lowerIsBetter) ? p.weight : top),
+                chart.points[0]!.weight,
+              )
               return (
                 <section class="card" key={chart.id}>
                   <div class="progress-head">
                     <h2 class="card-title">{chart.name}</h2>
-                    <span class="progress-max">{fmtWeight(max)} кг</span>
+                    <span class="progress-max">{fmtWeight(best)} кг</span>
                   </div>
-                  <Sparkline points={chart.points} />
+                  <Sparkline points={chart.points} lowerIsBetter={chart.lowerIsBetter} />
                 </section>
               )
             })

@@ -46,6 +46,12 @@ type Exercise struct {
 	DefaultReps string `json:"default_reps"`
 	Weighted    bool   `json:"weighted"`
 
+	// LowerIsBetter inverts the direction of progress. On an assisted machine the number
+	// recorded is the help the machine gives, so less of it is the better result. Without
+	// this the record marker and the chart celebrate a step backwards. omitempty keeps the
+	// canonical form — and therefore the hash — unchanged for programs that never set it.
+	LowerIsBetter bool `json:"lower_is_better,omitempty"`
+
 	// Groups and RestSec are filled in from the start but unused by the first version of
 	// the app: Groups will drive weekly volume per muscle group, and RestSec will feed the
 	// rest timer. Adding them after the fact would mean editing every program, and the

@@ -19,7 +19,13 @@ const H = 64
 const PAD_X = 6
 const PAD_Y = 10
 
-export function Sparkline({ points }: { points: ProgressPoint[] }) {
+export function Sparkline({
+  points,
+  lowerIsBetter = false,
+}: {
+  points: ProgressPoint[]
+  lowerIsBetter?: boolean
+}) {
   if (points.length < 2) return null
 
   const weights = points.map((p) => p.weight)
@@ -28,15 +34,25 @@ export function Sparkline({ points }: { points: ProgressPoint[] }) {
   // A flat series must not collapse into a division by zero — it is drawn as a centre line.
   const span = max - min || 1
 
+  // The best result: the smallest number when it counts machine assistance.
+  const record = lowerIsBetter ? min : max
+
   const x = (i: number) => PAD_X + (i * (W - PAD_X * 2)) / (points.length - 1)
-  const y = (weight: number) =>
-    max === min ? H / 2 : H - PAD_Y - ((weight - min) / span) * (H - PAD_Y * 2)
+  // Better is always upwards, whichever way the numbers run. A line that climbs as the
+  // assistance drops reads as progress, which is exactly what it is; drawn literally it
+  // would read as decline. Nothing contradicts the inversion, because the axis carries no
+  // value labels — the caption states the best result outright.
+  const y = (weight: number) => {
+    if (max === min) return H / 2
+    const share = (weight - min) / span
+    return H - PAD_Y - (lowerIsBetter ? 1 - share : share) * (H - PAD_Y * 2)
+  }
 
   const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)} ${y(p.weight).toFixed(1)}`).join(' ')
 
-  // The record is the first time the maximum was reached: highlighting the last of the
+  // The record is the first time the best value was reached: highlighting the last of the
   // equal points would mean declaring a repeat of an old result a record.
-  const recordIndex = weights.indexOf(max)
+  const recordIndex = weights.indexOf(record)
   const lastIndex = points.length - 1
 
   const first = points[0]!
@@ -48,7 +64,7 @@ export function Sparkline({ points }: { points: ProgressPoint[] }) {
         viewBox={`0 0 ${W} ${H}`}
         class="chart-svg"
         role="img"
-        aria-label={`Лучший рабочий вес: с ${fmtWeight(first.weight)} кг (${fmtDate(first.at)}) до ${fmtWeight(last.weight)} кг (${fmtDate(last.at)}), максимум ${fmtWeight(max)} кг`}
+        aria-label={`Лучший рабочий вес: с ${fmtWeight(first.weight)} кг (${fmtDate(first.at)}) до ${fmtWeight(last.weight)} кг (${fmtDate(last.at)}), лучший результат ${fmtWeight(record)} кг`}
       >
         {/* The axis is deliberately faint: it is a reference, not content. */}
         <line x1="0" y1={H - 1} x2={W} y2={H - 1} class="chart-axis" />
@@ -64,11 +80,11 @@ export function Sparkline({ points }: { points: ProgressPoint[] }) {
         {/* A surface-coloured ring separates the record point from the line when it sits on it. */}
         <circle
           cx={x(recordIndex)}
-          cy={y(max)}
+          cy={y(record)}
           r="5.5"
           class="chart-record-ring"
         />
-        <circle cx={x(recordIndex)} cy={y(max)} r="4" class="chart-record" />
+        <circle cx={x(recordIndex)} cy={y(record)} r="4" class="chart-record" />
       </svg>
 
       <figcaption class="chart-dates">

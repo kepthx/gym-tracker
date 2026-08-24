@@ -86,6 +86,8 @@ export interface Exercise {
   sets: number
   default_reps: string
   weighted: boolean
+  /** Progress runs downwards: the number is machine assistance, so less of it is better. */
+  lower_is_better?: boolean
   groups?: string[]
   rest_sec?: number
 }
