@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useState } from 'preact/hooks'
 import { guideFor } from '../state/store'
-import { youtubeEmbedURL } from './youtube'
+import { mediaUrl } from '../sync/client'
+import type { ExerciseMedia } from '../types'
 import './guide.css'
 
 /**
  * The technique reference for one exercise, expanded inside its card.
  *
- * The text comes from IndexedDB, so it reads in a basement gym with no signal. The video
- * does not, and says so rather than showing a frame that will never load.
+ * Everything here is first-party. The text comes from IndexedDB and the demonstration from
+ * this origin through the service worker's cache, so an opened guide makes no request to
+ * anyone — which is what CONTEXT.md §9 asks for, and what the embedded YouTube player this
+ * replaced could not give.
  */
 export function ExerciseGuide({ exerciseID }: { exerciseID: string }) {
   const guide = guideFor(exerciseID)
@@ -38,111 +41,77 @@ export function ExerciseGuide({ exerciseID }: { exerciseID: string }) {
         </>
       )}
 
-      {guide.video && (
-        <VideoFrame
-          youtubeID={guide.video.youtube_id}
-          startSec={guide.video.start_sec}
-          title={guide.video.title}
-          author={guide.video.author}
-        />
-      )}
+      {guide.media && <Demonstration exerciseID={exerciseID} media={guide.media} />}
     </div>
   )
 }
 
 /**
- * The video, and the one place in the application that reaches a third party.
+ * The demonstration: a silent looping clip, or the two end positions of the movement.
  *
- * Until play is tapped there is no iframe: the box is drawn in CSS, the poster is not pulled
- * from ytimg, and no YouTube script is loaded. So an open guide — and the workout screen it
- * sits on — sends Google nothing at all. That is what keeps CONTEXT.md §9 honest with a
- * player on the screen, and why the frame must stay created on demand rather than hidden.
+ * Openly licensed video of gym exercises barely exists, so most exercises get frames. Both
+ * kinds sit in the same box and carry the same caption, because from the reader's side they
+ * answer the same question.
+ *
+ * Loading it is not gated behind a tap the way the YouTube frame was: there is no third party
+ * left to withhold a request from, and a demonstration that needs a tap is a demonstration
+ * half the time nobody sees.
  */
-function VideoFrame({
-  youtubeID,
-  startSec,
-  title,
-  author,
-}: {
-  youtubeID: string
-  startSec?: number
-  title: string
-  author: string
-}) {
-  const [playing, setPlaying] = useState(false)
-  const online = useOnline()
-
-  // Whether the id is usable and whether play was tapped are two different facts, so they
-  // are two different values. Folding them into one nullable src made a guide with an
-  // unusable id render a play button that did nothing at all, forever, with no message.
-  const src = youtubeEmbedURL(youtubeID, startSec)
-
-  // The author is validated on the server, but a guide cached before that check existed can
-  // still be sitting in IndexedDB, and "Присед · " reads as a truncated string.
-  const caption = <div class="guide-video-caption">{author ? `${title} · ${author}` : title}</div>
-
-  let box
-  if (src === null) {
-    box = <div class="guide-video-offline">Видео к этому упражнению не открывается</div>
-  } else if (playing) {
-    // Once the frame is up it stays up, online or not. navigator.onLine flaps on iOS, and
-    // tearing the player down on a blip restarts the video from the beginning — and asks
-    // YouTube for it again with no tap behind it, which is the one thing this screen
-    // promises not to do.
-    box = (
-      <iframe
-        class="guide-video-box"
-        src={src}
-        title={title}
-        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-        // REQUIRED, and the tightest value that works. The embedded player identifies the
-        // embedding site by the Referer header and refuses to play without one — "Ошибка
-        // 153. Ошибка настройки видеопроигрывателя", which is what no-referrer produced
-        // here. This attribute overrides the document's same-origin policy for this one
-        // request, and cross-origin it sends the bare origin: no path, no query, nothing
-        // about which exercise was opened or who opened it. CONTEXT.md §9 still holds.
-        referrerpolicy="strict-origin-when-cross-origin"
-        loading="lazy"
-      />
-    )
-  } else if (!online) {
-    // A flat strip, not an empty 16:9 box: there is nothing to show, and pretending there
-    // is would just eat the screen.
-    box = <div class="guide-video-offline">Без сети видео не откроется</div>
-  } else {
-    box = (
-      <button
-        class="guide-video-box guide-video-facade"
-        onClick={() => setPlaying(true)}
-        aria-label={`Смотреть: ${title}`}
-      >
-        <span class="guide-play" aria-hidden="true" />
-        <span class="guide-video-hint">youtube.com</span>
-      </button>
-    )
-  }
+function Demonstration({ exerciseID, media }: { exerciseID: string; media: ExerciseMedia }) {
+  const [failed, setFailed] = useState(false)
 
   return (
-    <div class="guide-video">
-      {box}
-      {caption}
+    <div class="guide-media">
+      {failed ? (
+        // Reached when the file is neither cached nor reachable — a guide opened for the
+        // first time at the gym with no signal. The text above it is the part that matters
+        // and is already on screen, so this stays a quiet line rather than an error.
+        <div class="guide-media-missing">Показ не загрузился — нет сети</div>
+      ) : media.kind === 'clip' ? (
+        <video
+          class="guide-media-box"
+          src={mediaUrl(`${exerciseID}.mp4`)}
+          /* Muted and inline are not preferences: iOS refuses to autoplay anything with
+             sound, and without playsinline it takes the video full screen and throws the
+             user out of the workout. */
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <Frames exerciseID={exerciseID} onError={() => setFailed(true)} />
+      )}
+
+      <div class="guide-media-caption">
+        <a href={media.source} target="_blank" rel="noreferrer noopener">
+          {media.credit}
+        </a>{' '}
+        · {media.license}
+      </div>
     </div>
   )
 }
 
-/** Connectivity, as a rendered value: the guide is opened at the gym, where it changes. */
-function useOnline(): boolean {
-  const [online, setOnline] = useState(() => navigator.onLine)
-
-  useEffect(() => {
-    const update = () => setOnline(navigator.onLine)
-    addEventListener('online', update)
-    addEventListener('offline', update)
-    return () => {
-      removeEventListener('online', update)
-      removeEventListener('offline', update)
-    }
-  }, [])
-
-  return online
+/**
+ * The two end positions, crossfading.
+ *
+ * Two stacked images with one of them animating its opacity: the movement between them is
+ * left to the reader, which is honest — these are photographs, not frames of a film. The
+ * animation is CSS, so it costs nothing and stops with the element.
+ */
+function Frames({ exerciseID, onError }: { exerciseID: string; onError: () => void }) {
+  return (
+    <div class="guide-media-box guide-frames">
+      <img src={mediaUrl(`${exerciseID}-0.jpg`)} alt="Исходное положение" onError={onError} />
+      <img
+        class="guide-frame-end"
+        src={mediaUrl(`${exerciseID}-1.jpg`)}
+        alt="Конечное положение"
+        onError={onError}
+      />
+    </div>
+  )
 }

@@ -113,18 +113,28 @@ export interface Program {
  * mint a new snapshot on every comma. An exercise id is forever, which is what lets one
  * guide serve a workout recorded against a program that has since been replaced.
  */
-export interface GuideVideo {
-  youtube_id: string
-  start_sec?: number
-  title: string
-  author: string
+/**
+ * The demonstration for one exercise.
+ *
+ * `clip` is a short silent loop, `frames` the two end positions of the movement, crossfaded.
+ * Both are served from this origin. There is no file name here: the files are derived from
+ * the exercise id, which is what keeps the guides file from being able to name a path.
+ *
+ * `credit` and `license` are shown under the demonstration. The clips are CC BY, so that is
+ * a licence condition, not a nicety.
+ */
+export interface ExerciseMedia {
+  kind: 'clip' | 'frames'
+  credit: string
+  license: string
+  source: string
 }
 
 export interface ExerciseGuide {
   summary: string
   cues: string[]
   mistakes?: string[]
-  video?: GuideVideo
+  media?: ExerciseMedia
 }
 
 export interface User {

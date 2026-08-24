@@ -20,6 +20,12 @@ func (a *API) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/sync", a.requireUser(a.getSync))
 	mux.HandleFunc("GET /api/program", a.requireUser(a.getProgram))
 	mux.HandleFunc("GET /api/guides", a.requireUser(a.getGuides))
+
+	// Outside /api/ on purpose. The service worker is forbidden from caching /api/ — a stale
+	// answer there is indistinguishable from fresh data — while these files are immutable and
+	// have to be cached, or the demonstration would need a connection every time. The pattern
+	// is more specific than the SPA's "GET /", so it wins the route.
+	mux.HandleFunc("GET /media/{name}", a.serveMedia)
 	mux.HandleFunc("GET /api/export", a.requireUser(a.getExport))
 
 	// The database file and the diagnostics contain every user's data.

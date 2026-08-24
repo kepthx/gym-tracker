@@ -14,7 +14,8 @@ const guidesFile = `{
     "squat_bb": {
       "summary": "Штанга на спине, таз ниже колен.",
       "cues": ["Гриф на задних дельтах"],
-      "video": {"youtube_id": "7Yg2YVNdd8c", "title": "Присед", "author": "Кто-то"}
+      "media": {"kind": "clip", "credit": "FitnessScape", "license": "CC BY 3.0",
+                "source": "https://commons.wikimedia.org/wiki/File:Squat.webm"}
     }
   }
 }`
@@ -48,9 +49,10 @@ func TestGetGuides(t *testing.T) {
 			Exercises map[string]struct {
 				Summary string   `json:"summary"`
 				Cues    []string `json:"cues"`
-				Video   *struct {
-					YouTubeID string `json:"youtube_id"`
-				} `json:"video"`
+				Media   *struct {
+					Kind   string `json:"kind"`
+					Credit string `json:"credit"`
+				} `json:"media"`
 			} `json:"exercises"`
 		} `json:"guides"`
 	}](t, resp)
@@ -62,8 +64,8 @@ func TestGetGuides(t *testing.T) {
 	if !ok {
 		t.Fatal("в ответе нет squat_bb")
 	}
-	if squat.Video == nil || squat.Video.YouTubeID != "7Yg2YVNdd8c" {
-		t.Fatalf("видео потерялось: %+v", squat.Video)
+	if squat.Media == nil || squat.Media.Kind != "clip" || squat.Media.Credit != "FitnessScape" {
+		t.Fatalf("медиа потерялось: %+v", squat.Media)
 	}
 	if etag != `"`+body.Hash+`"` {
 		t.Fatalf("ETag %q не совпадает с хешем %q", etag, body.Hash)
@@ -182,28 +184,26 @@ func TestGuidesReloadRequiresAdmin(t *testing.T) {
 	}
 }
 
-// The one deliberate hole in the first-party policy, and nothing beyond it: everything else
-// in CONTEXT.md §9 depends on this header staying narrow.
-func TestCSPAllowsOnlyTheVideoFrame(t *testing.T) {
+// Nothing third-party, and no hole left behind by the version that embedded a YouTube frame.
+// This is CONTEXT.md §9 expressed as an assertion: the demonstrations are served from this
+// origin now, so there is no longer any reason for the policy to name another host.
+func TestCSPIsStrictlyFirstParty(t *testing.T) {
 	h := newHarness(t)
 	resp := h.get("/api/auth/me")
 	defer resp.Body.Close()
 
 	csp := resp.Header.Get("Content-Security-Policy")
-	if !strings.Contains(csp, "frame-src https://www.youtube-nocookie.com") {
-		t.Fatalf("в CSP нет кадра для видео:\n%s", csp)
-	}
 	for _, mustStay := range []string{
-		"default-src 'self'", "script-src 'self'", "connect-src 'self'", "img-src 'self' data:",
+		"default-src 'self'", "script-src 'self'", "connect-src 'self'",
+		"img-src 'self' data:", "frame-ancestors 'none'",
 	} {
 		if !strings.Contains(csp, mustStay) {
 			t.Fatalf("из CSP пропало %q:\n%s", mustStay, csp)
 		}
 	}
-	// The player is a bare iframe: no YouTube JS, no thumbnail from ytimg, no XHR.
-	for _, mustNotAppear := range []string{"youtube.com/iframe_api", "ytimg", "googleapis"} {
+	for _, mustNotAppear := range []string{"frame-src", "youtube", "ytimg", "google"} {
 		if strings.Contains(csp, mustNotAppear) {
-			t.Fatalf("в CSP появилось лишнее %q:\n%s", mustNotAppear, csp)
+			t.Fatalf("в CSP осталось стороннее %q:\n%s", mustNotAppear, csp)
 		}
 	}
 }

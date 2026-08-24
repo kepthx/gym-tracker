@@ -15,10 +15,11 @@
         "Колени сводятся внутрь",
         "Пятки отрываются от пола"
       ],
-      "video": {
-        "youtube_id": "7Yg2YVNdd8c",
-        "title": "Приседание.ТЕХНИКА выполнения и ЧАСТЫЕ ОШИБКИ",
-        "author": "Ivan Krasavin"
+      "media": {
+        "kind": "clip",
+        "credit": "FitnessScape",
+        "license": "CC BY 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File%3ASquat_-_exercise_demonstration_video.webm"
       }
     },
     "rdl": {
@@ -35,10 +36,11 @@
         "Штанга уходит вперёд от бедра",
         "Приседание вместо наклона"
       ],
-      "video": {
-        "youtube_id": "z2SeYAR0NVo",
-        "title": "Румынская тяга. Техника выполнения",
-        "author": "Ilya Generalov"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "press_db_incline": {
@@ -55,10 +57,11 @@
         "Заброс гантелей рывком без контроля",
         "Отрыв лопаток от скамьи"
       ],
-      "video": {
-        "youtube_id": "fB2oVB4XeI8",
-        "title": "Жим гантелями лёжа под углом вверх: техника и нюансы",
-        "author": "ТВОЙ ТРЕНЕР: энциклопедия фитнеса"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "leg_extension": {
@@ -75,10 +78,11 @@
         "Бросок веса вниз без контроля",
         "Большой вес и укороченная амплитуда"
       ],
-      "video": {
-        "youtube_id": "qz8QvMGHJu0",
-        "title": "Разгибание ног в тренажёре сидя: техника и нюансы",
-        "author": "ТВОЙ ТРЕНЕР: энциклопедия фитнеса"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "box_jump": {
@@ -95,10 +99,11 @@
         "Подтягивание коленей к груди вместо реального прыжка",
         "Приземление на прямые ноги"
       ],
-      "video": {
-        "youtube_id": "4CCYCeKxqF4",
-        "title": "Прыжки на тумбу. Техника, полный разбор",
-        "author": "Кузница Спорта"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "russian_twist": {
@@ -115,10 +120,11 @@
         "Руки ходят из стороны в сторону при неподвижном корпусе",
         "Темп в ущерб амплитуде"
       ],
-      "video": {
-        "youtube_id": "iHHpgb3SZJQ",
-        "title": "Русский твист с отягощением. Russian twist. Техника выполнения",
-        "author": "Олександр Попенко"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "ohp_bb": {
@@ -135,10 +141,11 @@
         "Подсед и толчок ногами",
         "Штанга остаётся впереди головы в верхней точке"
       ],
-      "video": {
-        "youtube_id": "XsqUjjgYPS8",
-        "title": "Жим штанги стоя: техника выполнения и советы",
-        "author": "Евгений Есипович"
+      "media": {
+        "kind": "clip",
+        "credit": "FitnessScape",
+        "license": "CC BY 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File%3AShoulder_press_-_exercise_demonstration_video.webm"
       }
     },
     "pullup_assisted": {
@@ -155,10 +162,11 @@
         "Половинная амплитуда, без полного виса внизу",
         "Слишком большой противовес: подход перестаёт быть тяжёлым"
       ],
-      "video": {
-        "youtube_id": "4oQA6BZKWcs",
-        "title": "Подтягивания в гравитроне: техника и нюансы",
-        "author": "ТВОЙ ТРЕНЕР: энциклопедия фитнеса"
+      "media": {
+        "kind": "clip",
+        "credit": "FitnessScape",
+        "license": "CC BY 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File%3APull-ups_-_exercise_demonstration_video.webm"
       }
     },
     "row_cable": {
@@ -175,10 +183,11 @@
         "Тяга одними руками, без лопаток",
         "Круглая спина в момент возврата"
       ],
-      "video": {
-        "youtube_id": "eLq8RGaHtJE",
-        "title": "Тяга горизонтального блока: техника и нюансы",
-        "author": "ТВОЙ ТРЕНЕР: энциклопедия фитнеса"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "lateral_raise": {
@@ -195,10 +204,11 @@
         "Подъём выше плеч — работа уходит в трапецию",
         "Разворот кисти мизинцем вверх с большим весом"
       ],
-      "video": {
-        "youtube_id": "GvBy9CRqQfI",
-        "title": "Махи гантелями в стороны: техника выполнения",
-        "author": "ТВОЙ ТРЕНЕР: энциклопедия фитнеса"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "face_pull": {
@@ -215,10 +225,11 @@
         "Локти опускаются вниз",
         "Раскачка корпусом"
       ],
-      "video": {
-        "youtube_id": "SrN0ozdxVWQ",
-        "title": "Тяга каната к подбородку в блоке. Техника выполнения",
-        "author": "Ilya Generalov"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "overhead_carry": {
@@ -234,12 +245,7 @@
         "Наклон корпуса в сторону свободной руки",
         "Прогиб в пояснице",
         "Согнутая в локте рука"
-      ],
-      "video": {
-        "youtube_id": "EwDKTJwz8SQ",
-        "title": "Kettlebell Waiter Walk",
-        "author": "Zack Henderson"
-      }
+      ]
     },
     "plank": {
       "summary": "Упор на предплечьях, тело прямой линией от пяток до макушки, без провала таза.",
@@ -255,10 +261,11 @@
         "Таз задран вверх — упражнение становится лёгким",
         "Задержка дыхания"
       ],
-      "video": {
-        "youtube_id": "0JtBS11DGDk",
-        "title": "Как правильно держать планку",
-        "author": "Юрий Харламов"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "bench_bb": {
@@ -275,10 +282,11 @@
         "Отрыв таза от скамьи",
         "Отбив штанги от груди"
       ],
-      "video": {
-        "youtube_id": "XUeE5cTzsfo",
-        "title": "Жим штанги лёжа классический: техника и нюансы",
-        "author": "ТВОЙ ТРЕНЕР: энциклопедия фитнеса"
+      "media": {
+        "kind": "clip",
+        "credit": "FitnessScape",
+        "license": "CC BY 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File%3ABench_press_-_exercise_demonstration_video.webm"
       }
     },
     "lunge_db": {
@@ -295,10 +303,11 @@
         "Заваливание корпуса вперёд",
         "Отталкивание задней ногой вместо работы передней"
       ],
-      "video": {
-        "youtube_id": "vNrkKOiksCs",
-        "title": "Выпады с гантелями - техника выполнения упражнения на месте и в движении",
-        "author": "Евгений Есипович"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "dips": {
@@ -315,10 +324,11 @@
         "Рывки и раскачка ногами",
         "Слишком узкий хват в жиме — боль в запястьях"
       ],
-      "video": {
-        "youtube_id": "ORE34_2m62A",
-        "title": "ОТЖИМАНИЯ НА БРУСЬЯХ - исправь эти ошибки чтобы накачать грудь | Джефф Кавальер",
-        "author": "SMART TRAINING Channel"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "fly_cable": {
@@ -335,10 +345,11 @@
         "Большой вес и укороченная амплитуда",
         "Работа корпусом вместо рук"
       ],
-      "video": {
-        "youtube_id": "1cunOUoh0RQ",
-        "title": "Сведение рук в кроссовере с верхнего блока: техника выполнения",
-        "author": "ТВОЙ ТРЕНЕР: энциклопедия фитнеса"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "leg_curl": {
@@ -355,10 +366,11 @@
         "Бросок веса вниз",
         "Половинная амплитуда с большим весом"
       ],
-      "video": {
-        "youtube_id": "hSFM7VAZELM",
-        "title": "Сгибание ног в тренажёре лёжа: техника и нюансы",
-        "author": "ТВОЙ ТРЕНЕР: энциклопедия фитнеса"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "kb_swing": {
@@ -375,10 +387,11 @@
         "Подъём гири руками",
         "Прогиб в пояснице в верхней точке"
       ],
-      "video": {
-        "youtube_id": "hfzBArkbshg",
-        "title": "Махи гирей. Kettlebell Swing. Техника выполнения",
-        "author": "Олександр Попенко"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "row_bb": {
@@ -395,10 +408,11 @@
         "Круглая спина",
         "Рывок поясницей вместо тяги спиной"
       ],
-      "video": {
-        "youtube_id": "Fv4-fiwGGVA",
-        "title": "Тяга штанги в наклоне: 2 варианта выполнения",
-        "author": "ТВОЙ ТРЕНЕР: энциклопедия фитнеса"
+      "media": {
+        "kind": "clip",
+        "credit": "FitnessScape",
+        "license": "CC BY 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File%3ABent-over_row_-_exercise_demonstration_video.webm"
       }
     },
     "lat_pulldown": {
@@ -415,10 +429,11 @@
         "Тяга за голову — плечи в неудобной ротации",
         "Тяга одними руками, без лопаток"
       ],
-      "video": {
-        "youtube_id": "1IUmfLyfzyw",
-        "title": "Лучший разбор техники: ТЯГА ВЕРХНЕГО БЛОКА",
-        "author": "Влад Литвиненко"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "curl_bb": {
@@ -435,10 +450,11 @@
         "Локти уезжают вперёд",
         "Незаконченное разгибание внизу"
       ],
-      "video": {
-        "youtube_id": "MTEtGEHwUNQ",
-        "title": "ПОДЪЕМ ШТАНГИ НА БИЦЕПС СТОЯ. Правильная техника. | Михаил Смалько",
-        "author": "Михаил Смалько"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "lateral_rear_ss": {
@@ -455,10 +471,11 @@
         "Подъём выше плеч — работает трапеция",
         "Круглая спина в наклоне"
       ],
-      "video": {
-        "youtube_id": "8aidwLVg_IE",
-        "title": "Махи сидя на заднюю дельту. Махи гантелями в наклоне. Техника выполнения",
-        "author": "Олександр Попенко"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "farmer_walk": {
@@ -475,10 +492,11 @@
         "Раскачка корпусом из стороны в сторону",
         "Бросание снарядов на пол в конце"
       ],
-      "video": {
-        "youtube_id": "2kZnhk7Z20E",
-        "title": "Прогулка фермера",
-        "author": "Веселая наука"
+      "media": {
+        "kind": "frames",
+        "credit": "free-exercise-db",
+        "license": "Public domain",
+        "source": "https://github.com/yuhonas/free-exercise-db"
       }
     },
     "hanging_leg_raise": {
@@ -495,10 +513,11 @@
         "Работа только сгибателями бедра, без подкрутки таза",
         "Быстрое падение ног вниз"
       ],
-      "video": {
-        "youtube_id": "dVKJUa2gyww",
-        "title": "ПОДЪЕМЫ НОГ В ВИСЕ - разбор техники | Джефф Кавальер",
-        "author": "SMART TRAINING Channel"
+      "media": {
+        "kind": "clip",
+        "credit": "FitnessScape",
+        "license": "CC BY 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File%3ALeg_raises_-_exercise_demonstration_video.webm"
       }
     }
   }

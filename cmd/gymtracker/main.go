@@ -80,7 +80,7 @@ func serve(ctx context.Context) error {
 
 	// A broken guides file stops startup for the same reason a broken program does: it is
 	// edited by hand, and a silent half-load is harder to notice than a refusal to come up.
-	guides, err := guide.Load(cfg.GuidesPath)
+	guides, err := guide.Load(cfg.GuidesPath, cfg.MediaDir)
 	if err != nil {
 		return err
 	}
@@ -118,12 +118,13 @@ func serve(ctx context.Context) error {
 			logProgramReport(report)
 			return report.Attached, nil
 		},
-		Guides: guides,
+		Guides:   guides,
+		MediaDir: cfg.MediaDir,
 		ReloadGuides: func() (*guide.Set, error) {
 			// Fixing a technique cue means editing a file plus this call. No code change.
 			// Reload, not Load: a file that has gone missing must fail here rather than
 			// quietly reload as empty and wipe the reference off every device.
-			return guide.Reload(cfg.GuidesPath)
+			return guide.Reload(cfg.GuidesPath, cfg.MediaDir)
 		},
 	}).Routes(mux)
 

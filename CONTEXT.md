@@ -117,14 +117,14 @@ right in most cases, so that editing is the exception rather than a mandatory st
 Tapping a marked set again unmarks it.
 
 **Technique reference.** Every exercise card carries a quiet control that expands a guide in
-place: a one-line summary of the movement, several technique cues, the usual mistakes, and
-one video. The text is stored on the device and reads with no connection at all — it is
-opened at the gym. The video will not, and says so rather than showing a frame that never
-loads.
+place: a one-line summary of the movement, several technique cues, the usual mistakes, and a
+demonstration — either a short silent clip on a loop, or the two end positions of the movement
+crossfading. Which of the two an exercise gets is a matter of what exists under a free
+licence; openly licensed video of gym exercises is scarce, and most exercises get frames.
 
-The video is embedded, and it is the only thing in the application that reaches a third
-party — see §9. Nothing is requested from that third party until the user taps play: until
-then the player is a placeholder drawn by the application itself.
+Everything, the demonstration included, is served by the application itself and stored on the
+device, so an opened guide needs no connection at all — it is read at the gym. Nothing is
+fetched from anyone else, which is not an implementation detail but the requirement in §9.
 
 At the bottom, a button to finish the workout. It does not "save" (everything is saved
 already) — it closes the workout and moves it into history. It is disabled until at least one
@@ -215,14 +215,12 @@ entrances, no bounces, no confetti.
 
 - Social features, feeds, sharing achievements.
 - Gamification: points, levels, streaks, rewards.
-- Advertising, and analytics that send data to third parties. **One deliberate exception:**
-  the technique video in a guide is a YouTube frame, because filming and hosting a demo for
-  every exercise is not worth what it would cost. Its price is kept to the minimum that
-  still buys anything: the frame is created only after an explicit tap on play, so a screen
-  that is merely open sends nothing; no player script and no preview image are loaded, so
-  the only thing opened up in the page's policy is the frame itself; and everything else in
-  the application — text, data, fonts, images — stays first-party. Nothing about the user is
-  sent anywhere, ever.
+- Advertising, and analytics that send data to third parties. **Nothing third-party at all**,
+  in fact: no external script, no external font, no embedded player, no request to a host
+  other than this one. The demonstrations in §4.3 are freely licensed footage served from
+  this application's own storage, and their authors are credited on screen, which the licence
+  requires. An earlier version embedded a YouTube player as a deliberate exception to this
+  rule; it was removed, and the exception with it.
 - Large exercise libraries and program builders — the program is set once and changes rarely.
   The technique reference in §4.3 is not a library: it covers only the exercises in the
   user's own program, and there is no catalogue, no search and no list of "all exercises" —

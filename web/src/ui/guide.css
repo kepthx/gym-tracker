@@ -69,53 +69,63 @@
   color: var(--record);
 }
 
-.guide-video {
+.guide-media {
   margin-top: 16px;
 }
 
-.guide-video-box {
+.guide-media-box {
   display: block;
   width: 100%;
   aspect-ratio: 16 / 9;
+  object-fit: cover;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--field);
 }
 
-/* The facade. No thumbnail is fetched: this box is entirely first-party, and the frame that
-   is not — see ExerciseGuide.tsx — appears only after it is tapped. */
-.guide-video-facade {
+/* The two end positions, stacked. The second fades in and out over the first; the movement
+   between them is left to the reader, which is what these are — photographs, not film. */
+.guide-frames {
   position: relative;
-  padding: 0;
-  cursor: pointer;
-  transition: border-color var(--t);
+  overflow: hidden;
 }
 
-.guide-video-facade:active {
-  border-color: var(--accent);
-}
-
-.guide-play {
+.guide-frames img {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 13px 0 13px 22px;
-  border-color: transparent transparent transparent var(--accent);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.guide-video-hint {
-  position: absolute;
-  right: 10px;
-  bottom: 8px;
-  color: var(--muted);
-  font-size: 11px;
+.guide-frame-end {
+  animation: guide-crossfade 3.2s ease-in-out infinite;
 }
 
-.guide-video-offline {
+@keyframes guide-crossfade {
+  0%,
+  40% {
+    opacity: 1;
+  }
+  50%,
+  90% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* The one animation in the application that repeats. CONTEXT.md §5 allows only functional
+   motion, and this is the function: without it the pair is two photographs side by side. */
+@media (prefers-reduced-motion: reduce) {
+  .guide-frame-end {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+.guide-media-missing {
   padding: 14px var(--pad);
   border: 1px dashed var(--border);
   border-radius: var(--radius-sm);
@@ -124,8 +134,13 @@
   text-align: center;
 }
 
-.guide-video-caption {
+.guide-media-caption {
   margin-top: 8px;
   color: var(--muted);
   font-size: 12px;
+}
+
+.guide-media-caption a {
+  color: var(--muted);
+  text-decoration: underline;
 }

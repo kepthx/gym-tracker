@@ -17,7 +17,8 @@ const validFile = `{
       "summary": "Штанга на спине, таз ниже колен.",
       "cues": ["Гриф на задних дельтах", "Колени по линии носков"],
       "mistakes": ["Пятки отрываются от пола"],
-      "video": {"youtube_id": "7Yg2YVNdd8c", "start_sec": 42, "title": "Присед", "author": "Кто-то"}
+      "media": {"kind": "clip", "credit": "FitnessScape", "license": "CC BY 3.0",
+                "source": "https://commons.wikimedia.org/wiki/File:Squat.webm"}
     },
     "plank": {
       "summary": "Тело прямой линией от пяток до макушки.",
@@ -36,12 +37,12 @@ func TestParseValid(t *testing.T) {
 	}
 
 	squat := set.File.Exercises["squat_bb"]
-	if squat.Video == nil || squat.Video.YouTubeID != "7Yg2YVNdd8c" || squat.Video.StartSec != 42 {
-		t.Fatalf("видео разобрано неверно: %+v", squat.Video)
+	if squat.Media == nil || squat.Media.Kind != KindClip || squat.Media.Credit != "FitnessScape" {
+		t.Fatalf("медиа разобрано неверно: %+v", squat.Media)
 	}
-	// A guide without a video is normal: not every exercise needs one.
-	if set.File.Exercises["plank"].Video != nil {
-		t.Fatal("у планки не было видео, а оно появилось")
+	// A guide with no demonstration is normal: nothing openly licensed shows every movement.
+	if set.File.Exercises["plank"].Media != nil {
+		t.Fatal("у планки не было медиа, а оно появилось")
 	}
 	if set.Hash == "" || len(set.Canonical) == 0 {
 		t.Fatal("пустой хеш или канонический вид")
@@ -88,14 +89,29 @@ func TestParseRejects(t *testing.T) {
 		{"пустой пункт", `{"version":1,"exercises":{"squat_bb":{"summary":"с","cues":["к",""]}}}`, "пустой пункт техники 2"},
 		{"пустая ошибка", `{"version":1,"exercises":{"squat_bb":{"summary":"с","cues":["к"],"mistakes":[" "]}}}`, "пустая ошибка 1"},
 		{
-			"пустой title у видео",
-			`{"version":1,"exercises":{"squat_bb":{"summary":"с","cues":["к"],"video":{"youtube_id":"7Yg2YVNdd8c","title":""}}}}`,
-			"пустой title",
+			"неизвестный kind",
+			`{"version":1,"exercises":{"squat_bb":{"summary":"с","cues":["к"],"media":{"kind":"gif","credit":"к","license":"л","source":"https://x/y"}}}}`,
+			`kind="gif"`,
 		},
 		{
-			"отрицательный start_sec",
-			`{"version":1,"exercises":{"squat_bb":{"summary":"с","cues":["к"],"video":{"youtube_id":"7Yg2YVNdd8c","title":"т","start_sec":-1}}}}`,
-			"start_sec=-1",
+			"пустой credit",
+			`{"version":1,"exercises":{"squat_bb":{"summary":"с","cues":["к"],"media":{"kind":"clip","credit":"","license":"л","source":"https://x/y"}}}}`,
+			"пустой credit",
+		},
+		{
+			"пустая license",
+			`{"version":1,"exercises":{"squat_bb":{"summary":"с","cues":["к"],"media":{"kind":"clip","credit":"к","license":" ","source":"https://x/y"}}}}`,
+			"пустой license",
+		},
+		{
+			"credit в пробелах",
+			`{"version":1,"exercises":{"squat_bb":{"summary":"с","cues":["к"],"media":{"kind":"clip","credit":" к ","license":"л","source":"https://x/y"}}}}`,
+			"окружён пробелами",
+		},
+		{
+			"source не https",
+			`{"version":1,"exercises":{"squat_bb":{"summary":"с","cues":["к"],"media":{"kind":"clip","credit":"к","license":"л","source":"http://x/y"}}}}`,
+			"нужна https-ссылка",
 		},
 	}
 
@@ -109,43 +125,6 @@ func TestParseRejects(t *testing.T) {
 				t.Fatalf("в ошибке нет %q:\n%v", c.want, err)
 			}
 		})
-	}
-}
-
-// The YouTube id rule is implemented twice — here and in web/src/ui/youtube.ts — and the
-// value ends up in the src of an iframe. Code cannot be shared between Go and TypeScript, but
-// the truth can, exactly as testdata/merge_cases.json does it for the merge rules: one table
-// read by both sides means a one-sided edit fails on the other side.
-func TestSharedYouTubeIDTable(t *testing.T) {
-	raw, err := os.ReadFile(filepath.Join("..", "..", "testdata", "youtube_ids.json"))
-	if err != nil {
-		t.Fatalf("прочитать таблицу истины: %v", err)
-	}
-	var table struct {
-		Accepted []string `json:"accepted"`
-		Rejected []string `json:"rejected"`
-	}
-	if err := json.Unmarshal(raw, &table); err != nil {
-		t.Fatalf("разобрать таблицу истины: %v", err)
-	}
-	if len(table.Accepted) == 0 || len(table.Rejected) == 0 {
-		t.Fatal("таблица истины пуста — тест ничего не проверяет")
-	}
-
-	fileWith := func(id string) []byte {
-		return []byte(`{"version":1,"exercises":{"squat_bb":{"summary":"с","cues":["к"],"video":{"youtube_id":` +
-			mustQuote(id) + `,"title":"т","author":"а"}}}}`)
-	}
-
-	for _, id := range table.Accepted {
-		if _, err := Parse("test.json", fileWith(id)); err != nil {
-			t.Errorf("youtube_id %q отвергнут, а должен приниматься: %v", id, err)
-		}
-	}
-	for _, id := range table.Rejected {
-		if _, err := Parse("test.json", fileWith(id)); err == nil {
-			t.Errorf("youtube_id %q принят, а не должен", id)
-		}
 	}
 }
 
@@ -164,7 +143,7 @@ func TestValidationCollectsEveryProblem(t *testing.T) {
 }
 
 func TestLoadMissingFileIsNotAnError(t *testing.T) {
-	set, err := Load(filepath.Join(t.TempDir(), "нет-такого.json"))
+	set, err := Load(filepath.Join(t.TempDir(), "нет-такого.json"), t.TempDir())
 	if err != nil {
 		t.Fatalf("отсутствующий файл стал ошибкой: %v", err)
 	}
@@ -181,7 +160,7 @@ func TestLoadBrokenFileFails(t *testing.T) {
 	if err := os.WriteFile(path, []byte(`{"version":1,`), 0o644); err != nil {
 		t.Fatalf("записать файл: %v", err)
 	}
-	if _, err := Load(path); err == nil {
+	if _, err := Load(path, t.TempDir()); err == nil {
 		t.Fatal("битый файл загрузился")
 	}
 }
@@ -195,7 +174,8 @@ func TestLoadBrokenFileFails(t *testing.T) {
 // over nothing — the exact silent hole it exists to prevent. Walking the directory also means
 // a second user's program is covered the day it is added.
 func TestShippedGuidesCoverEveryProgram(t *testing.T) {
-	set, err := Load(filepath.Join("..", "..", "guides", "exercises.json"))
+	set, err := Load(filepath.Join("..", "..", "guides", "exercises.json"),
+		filepath.Join("..", "..", "media"))
 	if err != nil {
 		t.Fatalf("справочник репозитория не грузится: %v", err)
 	}
@@ -225,4 +205,53 @@ func mustQuote(s string) string {
 		panic(err)
 	}
 	return string(quoted)
+}
+
+// A guide that promises a demonstration with no file behind it must not load. The guides file
+// and the media directory are edited by hand, separately, which is how they drift apart — and
+// the result on screen is a broken player, which reads as a broken application.
+func TestLoadRejectsMissingMedia(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "exercises.json")
+	file := `{"version":1,"exercises":{"squat_bb":{"summary":"с","cues":["к"],` +
+		`"media":{"kind":"clip","credit":"к","license":"л","source":"https://x/y"}}}}`
+	if err := os.WriteFile(path, []byte(file), 0o644); err != nil {
+		t.Fatalf("записать файл: %v", err)
+	}
+
+	media := t.TempDir()
+	if _, err := Load(path, media); err == nil {
+		t.Fatal("справочник с обещанным, но отсутствующим клипом загрузился")
+	} else if !strings.Contains(err.Error(), "squat_bb.mp4") {
+		t.Fatalf("в ошибке не назван недостающий файл:\n%v", err)
+	}
+
+	// With the file in place the same guide loads.
+	if err := os.WriteFile(filepath.Join(media, "squat_bb.mp4"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("записать клип: %v", err)
+	}
+	if _, err := Load(path, media); err != nil {
+		t.Fatalf("справочник с клипом на месте не загрузился: %v", err)
+	}
+}
+
+// Frames need both halves: one of the two is a crossfade with nothing to fade to.
+func TestLoadRejectsHalfOfAFramePair(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "exercises.json")
+	file := `{"version":1,"exercises":{"plank":{"summary":"с","cues":["к"],` +
+		`"media":{"kind":"frames","credit":"к","license":"л","source":"https://x/y"}}}}`
+	if err := os.WriteFile(path, []byte(file), 0o644); err != nil {
+		t.Fatalf("записать файл: %v", err)
+	}
+
+	media := t.TempDir()
+	if err := os.WriteFile(filepath.Join(media, "plank-0.jpg"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("записать кадр: %v", err)
+	}
+	if _, err := Load(path, media); err == nil {
+		t.Fatal("недостаёт второго кадра, а справочник загрузился")
+	} else if !strings.Contains(err.Error(), "plank-1.jpg") {
+		t.Fatalf("в ошибке не назван недостающий кадр:\n%v", err)
+	}
 }

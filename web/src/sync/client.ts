@@ -139,6 +139,17 @@ export async function getGuides(etag: string): Promise<GuidesResponse | null> {
   return (await request<GuidesResponse | undefined>(`${API}/guides`, init)) ?? null
 }
 
+/**
+ * A demonstration file.
+ *
+ * Outside /api/ deliberately: the service worker is forbidden from caching /api/, and these
+ * files are immutable and have to be cached, or the guide would need a connection every time
+ * it is opened. Names are built by the caller from the exercise id, never taken from data.
+ */
+export function mediaUrl(name: string): string {
+  return `${import.meta.env.BASE_URL}media/${name}`
+}
+
 export function exportUrl(): string {
   return `${API}/export`
 }

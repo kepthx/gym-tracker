@@ -48,7 +48,11 @@ self.addEventListener('fetch', (event) => {
 
   // Build output carries a content hash in the filename, so those files are immutable:
   // serving them from cache is safe, and safe forever.
-  if (url.pathname.startsWith(`${BASE}assets/`)) {
+  //
+  // The exercise demonstrations under /media/ are immutable by the same convention —
+  // replacing one means a new file name — and they are the reason the guide opens at the gym
+  // with no signal at all. They are NOT under /api/, precisely so this line can exist.
+  if (url.pathname.startsWith(`${BASE}assets/`) || url.pathname.startsWith(`${BASE}media/`)) {
     event.respondWith(
       caches.match(request).then(
         (hit) =>

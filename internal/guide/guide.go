@@ -1,6 +1,7 @@
 // Package guide loads and validates the exercise technique guides.
 //
-// A guide is reference text plus one video for an exercise the user already trains by. It
+// A guide is reference text plus one demonstration for an exercise the user already trains
+// by — a short silent clip, or the two end positions of the movement. It
 // lives in its own file rather than inside programs/<username>.json on purpose: a program is
 // canonicalised and hashed, every session stores the program_hash it was recorded against,
 // and history renders from that snapshot. Putting prose into the program would mean a new
@@ -13,6 +14,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -20,28 +22,49 @@ import (
 	"github.com/kepthx/gym-tracker/internal/confload"
 )
 
-// youTubeIDRe is what YouTube video ids look like. This is not cosmetic validation: the id
-// is substituted into the src of an iframe, so the narrow alphabet is what keeps the file
-// from being able to point the player anywhere else. The file never supplies a URL — only
-// an id — and the URL is assembled in code.
-var youTubeIDRe = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
+// sourceRe keeps `source` an https URL. It is rendered as a link under the demonstration,
+// and a licence that requires crediting a page is poorly served by a link to anywhere else.
+var sourceRe = regexp.MustCompile(`^https://[^\s"<>]+$`)
 
 // SupportedVersion is the version of the guides file format.
 const SupportedVersion = 1
 
-type Video struct {
-	YouTubeID string `json:"youtube_id"`
-	// StartSec cuts off the intro: technique usually starts a good way into a video.
-	StartSec int    `json:"start_sec,omitempty"`
-	Title    string `json:"title"`
-	Author   string `json:"author"`
+// The two ways an exercise is shown. Openly licensed video of gym exercises barely exists,
+// so most exercises get the two end positions of the movement instead of a clip; the client
+// crossfades between them.
+const (
+	KindClip   = "clip"
+	KindFrames = "frames"
+)
+
+// Media is the demonstration for one exercise.
+//
+// It carries no file name. The files are derived from the exercise id — <id>.mp4 for a clip,
+// <id>-0.jpg and <id>-1.jpg for frames — so nothing in the guides file can name a path, and
+// the media handler needs no defence against one.
+//
+// Credit and License are not decoration: the clips are CC BY and the frames public domain,
+// and attribution is a condition of the former. They are validated like any required field.
+type Media struct {
+	Kind    string `json:"kind"`
+	Credit  string `json:"credit"`
+	License string `json:"license"`
+	Source  string `json:"source"`
+}
+
+// Files lists the media files an exercise needs on disk.
+func (m *Media) Files(exerciseID string) []string {
+	if m.Kind == KindClip {
+		return []string{exerciseID + ".mp4"}
+	}
+	return []string{exerciseID + "-0.jpg", exerciseID + "-1.jpg"}
 }
 
 type Guide struct {
 	Summary  string   `json:"summary"`
 	Cues     []string `json:"cues"`
 	Mistakes []string `json:"mistakes,omitempty"`
-	Video    *Video   `json:"video,omitempty"`
+	Media    *Media   `json:"media,omitempty"`
 }
 
 type File struct {
@@ -141,33 +164,32 @@ func validate(f *File) []string {
 			}
 		}
 
-		if g.Video == nil {
+		if g.Media == nil {
 			continue
 		}
-		if !youTubeIDRe.MatchString(g.Video.YouTubeID) {
+		if g.Media.Kind != KindClip && g.Media.Kind != KindFrames {
 			problems = append(problems, fmt.Sprintf(
-				"%s: youtube_id=%q — нужен именно идентификатор ролика (%s), не ссылка",
-				where, g.Video.YouTubeID, youTubeIDRe))
+				"%s: kind=%q, бывает только %q или %q", where, g.Media.Kind, KindClip, KindFrames))
 		}
-		// Both reach the screen as "{title} · {author}", so both are held to the same rule.
+		// Both reach the screen as "{credit} · {license}", so both are held to the same rule.
 		// Surrounding whitespace matters here: it is invisible in the file and visible in
-		// the caption under the player.
+		// the caption under the demonstration.
 		for _, field := range []struct{ name, value string }{
-			{"title", g.Video.Title},
-			{"author", g.Video.Author},
+			{"credit", g.Media.Credit},
+			{"license", g.Media.License},
 		} {
 			switch {
 			case strings.TrimSpace(field.value) == "":
-				problems = append(problems, fmt.Sprintf("%s: пустой %s у видео", where, field.name))
+				problems = append(problems, fmt.Sprintf("%s: пустой %s у медиа", where, field.name))
 			case field.value != strings.TrimSpace(field.value):
 				problems = append(problems, fmt.Sprintf(
-					"%s: %s у видео окружён пробелами — они видны в подписи под роликом",
-					where, field.name))
+					"%s: %s у медиа окружён пробелами — они видны в подписи", where, field.name))
 			}
 		}
-		if g.Video.StartSec < 0 {
+		if !sourceRe.MatchString(g.Media.Source) {
 			problems = append(problems, fmt.Sprintf(
-				"%s: start_sec=%d, нужно >= 0", where, g.Video.StartSec))
+				"%s: source=%q — нужна https-ссылка на страницу первоисточника",
+				where, g.Media.Source))
 		}
 	}
 
@@ -182,8 +204,8 @@ func validate(f *File) []string {
 //
 // A guide for an exercise no longer in the program, and an exercise with no guide, are both
 // normal: programs change every 6–8 weeks, guides much more rarely.
-func Load(path string) (*Set, error) {
-	set, err := Reload(path)
+func Load(path, mediaDir string) (*Set, error) {
+	set, err := Reload(path, mediaDir)
 	if errors.Is(err, fs.ErrNotExist) {
 		return Empty(), nil
 	}
@@ -198,12 +220,48 @@ func Load(path string) (*Set, error) {
 // working reference for an empty one, whose new hash every client then fetches and writes
 // over its own copy. The reference would disappear from every device, including the ones
 // sitting offline at the gym, which is the single thing this file exists to survive.
-func Reload(path string) (*Set, error) {
+func Reload(path, mediaDir string) (*Set, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("прочитать справочник %s: %w", path, err)
 	}
-	return Parse(path, raw)
+	set, err := Parse(path, raw)
+	if err != nil {
+		return nil, err
+	}
+	if problems := missingMedia(set.File, mediaDir); len(problems) > 0 {
+		return nil, validationError(path, problems)
+	}
+	return set, nil
+}
+
+// missingMedia checks that every demonstration a guide promises is actually on disk.
+//
+// This is deliberately part of loading rather than a runtime concern: a card that offers a
+// clip and then shows a broken player reads as a broken application, and the guides file and
+// the media directory are edited by hand, separately, which is exactly how they drift apart.
+func missingMedia(f *File, dir string) []string {
+	var problems []string
+
+	ids := make([]string, 0, len(f.Exercises))
+	for id := range f.Exercises {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+
+	for _, id := range ids {
+		media := f.Exercises[id].Media
+		if media == nil {
+			continue
+		}
+		for _, name := range media.Files(id) {
+			if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
+				problems = append(problems, fmt.Sprintf(
+					"упражнение %q: нет файла %s в %s", id, name, dir))
+			}
+		}
+	}
+	return problems
 }
 
 // mustCanonical builds the one Set that is constructed in code rather than parsed. It goes

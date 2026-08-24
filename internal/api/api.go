@@ -29,6 +29,8 @@ type Deps struct {
 	Guides *guide.Set
 	// ReloadGuides rereads the guides file from disk and returns the fresh set.
 	ReloadGuides func() (*guide.Set, error)
+	// MediaDir is where the exercise demonstrations are served from.
+	MediaDir string
 }
 
 // Backups is what the API needs to know about backups.
@@ -57,6 +59,7 @@ type API struct {
 	// it is read through an atomic pointer rather than a lock: readers never block.
 	guides       atomic.Pointer[guide.Set]
 	reloadGuides func() (*guide.Set, error)
+	mediaDir     string
 }
 
 func New(deps Deps) *API {
@@ -73,6 +76,7 @@ func New(deps Deps) *API {
 		startedAt:      time.Now(),
 		reloadPrograms: deps.ReloadPrograms,
 		reloadGuides:   deps.ReloadGuides,
+		mediaDir:       deps.MediaDir,
 		// Five attempts in a row, then one every ten seconds. Someone who forgot their
 		// password will not notice the difference; brute force becomes pointless.
 		loginLimiter: newIPLimiter(10*time.Second, 5),

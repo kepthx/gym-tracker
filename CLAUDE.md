@@ -177,23 +177,25 @@ The trailing-content check is not pedantry: without it a merge conflict or a dou
 parses clean and boots a silently truncated file, which is the one outcome both formats exist
 to prevent.
 
-The video is the single exception to "no third-party anything" in CONTEXT.md §9, and it is
-narrow by construction:
+The demonstrations live in [media/](media/) and are served by
+[serveMedia](internal/api/media.go) at **`/media/{name}`** — outside `/api/` on purpose, because
+[public/sw.js](web/public/sw.js) is forbidden from caching `/api/` and these files must be
+cached or the guide would need a connection every time. `GYM_MEDIA` points at the directory.
 
-- the file supplies an eleven-character `youtube_id`, **never a URL**, validated in
-  [guide.go](internal/guide/guide.go) and again in
-  [youtube.ts](web/src/ui/youtube.ts) — the value ends up in the `src` of an iframe. Like the
-  merge rules, that is one rule written twice, so both sides are proved against one shared
-  table, [testdata/youtube_ids.json](testdata/youtube_ids.json); edit the table when you edit
-  either regexp, or the other language fails;
-- `frame-src https://www.youtube-nocookie.com` is the whole CSP change
-  ([middleware.go](internal/api/middleware.go)). No `script-src`, no `img-src`, no
-  `connect-src`: there is no YouTube JS API and no thumbnail pulled from ytimg;
-- the iframe is created only on an explicit tap on play
-  ([ExerciseGuide.tsx](web/src/ui/ExerciseGuide.tsx)) — the collapsed and the expanded guide
-  are both entirely first-party. [web/e2e/guide.spec.ts](web/e2e/guide.spec.ts) asserts that
-  no request to any Google host happens before that tap; keep that test if the player is
-  reworked.
+Two rules hold the media side together:
+
+- **File names are derived from the exercise id, never stored**: `<id>.mp4` for a `clip`,
+  `<id>-0.jpg` and `<id>-1.jpg` for `frames` ([`Media.Files`](internal/guide/guide.go)). Nothing
+  in the guides file can name a path, which is why `mediaNameRe` in
+  [media.go](internal/api/media.go) is the whole of the path defence.
+- **A guide that promises a demonstration must have the files**, checked at load
+  ([`missingMedia`](internal/guide/guide.go)). The guides file and the media directory are
+  edited by hand, separately, and a card offering a clip that 404s reads as a broken app.
+
+`credit` and `license` are required fields and are rendered under the demonstration: the clips
+are CC BY 3.0 and attribution is a licence condition, not a nicety. Media is immutable by
+convention — replacing a demonstration means a **new file name**, exactly like the hashed build
+assets, because both the HTTP cache and the service worker treat it as immutable forever.
 
 On the client the set lives in the `meta` store under `guides`/`guides_etag` rather than in a
 store of its own, so there is no IndexedDB migration, and it is read before any network call

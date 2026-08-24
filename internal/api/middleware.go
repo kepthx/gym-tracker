@@ -131,14 +131,7 @@ func secureHeaders(next http.Handler) http.Handler {
 		h.Set("Content-Security-Policy",
 			"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "+
 				"img-src 'self' data:; connect-src 'self'; base-uri 'none'; "+
-				"form-action 'self'; frame-ancestors 'none'; "+
-				// The single deliberate exception to the first-party rule: the technique
-				// video in an exercise guide. Nothing else is opened up — no script-src,
-				// no img-src, no connect-src — because the player is a bare iframe with no
-				// YouTube JS API and no thumbnail pulled from ytimg. And the iframe is only
-				// created after an explicit tap on play, so a screen that is merely open
-				// sends Google nothing at all.
-				"frame-src https://www.youtube-nocookie.com")
+				"form-action 'self'; frame-ancestors 'none'")
 		if r.TLS != nil {
 			h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}

@@ -42,18 +42,19 @@ Cross-compilation works without a toolchain: the SQLite driver is pure Go and cg
 
 ```bash
 sudo useradd --system --home /opt/gymtracker --shell /usr/sbin/nologin gymtracker
-sudo mkdir -p /opt/gymtracker/programs /opt/gymtracker/guides
+sudo mkdir -p /opt/gymtracker/programs /opt/gymtracker/guides /opt/gymtracker/media
 ```
 
 ## 3. Files
 
 ```bash
-ssh server 'mkdir -p /tmp/gym-deploy/programs /tmp/gym-deploy/guides'
+ssh server 'mkdir -p /tmp/gym-deploy/programs /tmp/gym-deploy/guides /tmp/gym-deploy/media'
 
 scp dist/gymtracker-linux-amd64 server:/tmp/gymtracker
 scp deploy/gymtracker.service   server:/tmp/
 scp programs/*.json             server:/tmp/gym-deploy/programs/
 scp guides/exercises.json       server:/tmp/gym-deploy/guides/
+scp media/*                     server:/tmp/gym-deploy/media/
 
 # on the server
 sudo install -m 755 -o gymtracker -g gymtracker /tmp/gymtracker /opt/gymtracker/gymtracker
@@ -61,6 +62,8 @@ sudo install -m 640 -o gymtracker -g gymtracker \
      /tmp/gym-deploy/programs/*.json /opt/gymtracker/programs/
 sudo install -m 640 -o gymtracker -g gymtracker \
      /tmp/gym-deploy/guides/exercises.json /opt/gymtracker/guides/exercises.json
+sudo install -m 644 -o gymtracker -g gymtracker \
+     /tmp/gym-deploy/media/* /opt/gymtracker/media/
 sudo install -m 644 /tmp/gymtracker.service /etc/systemd/system/
 ```
 
@@ -194,6 +197,21 @@ a new id. Never reuse a freed id for a different exercise, or a squat and a benc
 be glued into one chart. Data for exercises that dropped out of the program stays in the
 database and in the export, and history keeps rendering from the snapshot of the program it
 was recorded against.
+
+## Changing the exercise demonstrations
+
+Each guide points at a demonstration in `/opt/gymtracker/media/`, named after the exercise id:
+`<id>.mp4` for a clip, `<id>-0.jpg` and `<id>-1.jpg` for a pair of frames. The guides file
+never names a file — the names are derived — so adding a demonstration means dropping the
+files in with the right names and setting `media` on that exercise.
+
+**Replacing a demonstration means a new file name.** The files are served
+`Cache-Control: immutable` and cached by the service worker forever, exactly like the hashed
+build assets, so overwriting one in place leaves every phone showing the old one indefinitely.
+
+The service refuses to start if a guide promises a demonstration whose files are not there:
+a card offering a clip that 404s looks like a broken application, and the guides file and this
+directory are edited separately, which is how they drift apart.
 
 ## Changing the exercise guides
 
