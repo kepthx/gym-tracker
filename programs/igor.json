@@ -1,154 +1,23 @@
 {
   "version": 1,
-  "name": "Сила + гипертрофия · 4 дня",
+  "name": "Программа · 4 дня",
   "days": [
     {
-      "id": "d1",
-      "name": "Жим",
-      "muscles": "Грудь · трицепс · пресс",
+      "id": "legs_chest",
+      "name": "Ноги + грудь",
+      "muscles": "Квадрицепс · ягодицы · бицепс бедра · грудь · пресс",
       "exercises": [
         {
-          "id": "bench_bb",
-          "name": "Жим лёжа со штангой",
-          "scheme": "4×5",
-          "sets": 4,
-          "default_reps": "5",
-          "weighted": true,
-          "groups": ["chest", "triceps", "front_delts"],
-          "rest_sec": 180
-        },
-        {
-          "id": "press_db_incline",
-          "name": "Жим гантелей на наклонной",
-          "scheme": "3×8–10",
-          "sets": 3,
-          "default_reps": "10",
-          "weighted": true,
-          "groups": ["chest", "front_delts", "triceps"],
-          "rest_sec": 150
-        },
-        {
-          "id": "dips",
-          "name": "Отжимания на брусьях",
-          "scheme": "3×8–12",
-          "sets": 3,
-          "default_reps": "10",
-          "weighted": true,
-          "groups": ["chest", "triceps"],
-          "rest_sec": 120
-        },
-        {
-          "id": "fly_cable",
-          "name": "Разведения в кроссовере",
-          "scheme": "3×12–15",
-          "sets": 3,
-          "default_reps": "12",
-          "weighted": true,
-          "groups": ["chest"],
-          "rest_sec": 90
-        },
-        {
-          "id": "triceps_ext_bb",
-          "name": "Французский жим",
-          "scheme": "3×10–12",
-          "sets": 3,
-          "default_reps": "12",
-          "weighted": true,
-          "groups": ["triceps"],
-          "rest_sec": 90
-        },
-        {
-          "id": "plank",
-          "name": "Планка",
-          "scheme": "3×40 с",
-          "sets": 3,
-          "default_reps": "40с",
-          "weighted": false,
-          "groups": ["core"],
-          "rest_sec": 60
-        }
-      ]
-    },
-    {
-      "id": "d2",
-      "name": "Тяга",
-      "muscles": "Спина · бицепс",
-      "exercises": [
-        {
-          "id": "row_bb",
-          "name": "Тяга штанги в наклоне",
+          "id": "squat_bb",
+          "name": "Присед со штангой",
           "scheme": "4×6–8",
           "sets": 4,
           "default_reps": "8",
           "weighted": true,
-          "groups": ["back", "lats", "biceps"],
-          "rest_sec": 180
-        },
-        {
-          "id": "pullup",
-          "name": "Подтягивания",
-          "scheme": "4×6–10",
-          "sets": 4,
-          "default_reps": "8",
-          "weighted": false,
-          "groups": ["lats", "biceps"],
-          "rest_sec": 150
-        },
-        {
-          "id": "lat_pulldown",
-          "name": "Тяга верхнего блока",
-          "scheme": "3×10–12",
-          "sets": 3,
-          "default_reps": "12",
-          "weighted": true,
-          "groups": ["lats", "biceps"],
-          "rest_sec": 120
-        },
-        {
-          "id": "row_cable",
-          "name": "Тяга горизонтального блока",
-          "scheme": "3×10–12",
-          "sets": 3,
-          "default_reps": "12",
-          "weighted": true,
-          "groups": ["back", "lats"],
-          "rest_sec": 120
-        },
-        {
-          "id": "curl_bb",
-          "name": "Подъём штанги на бицепс",
-          "scheme": "3×8–10",
-          "sets": 3,
-          "default_reps": "10",
-          "weighted": true,
-          "groups": ["biceps"],
-          "rest_sec": 90
-        },
-        {
-          "id": "curl_hammer",
-          "name": "Молотки с гантелями",
-          "scheme": "3×12",
-          "sets": 3,
-          "default_reps": "12",
-          "weighted": true,
-          "groups": ["biceps", "forearms"],
-          "rest_sec": 90
-        }
-      ]
-    },
-    {
-      "id": "d3",
-      "name": "Ноги",
-      "muscles": "Квадрицепс · ягодицы · бицепс бедра · икры",
-      "exercises": [
-        {
-          "id": "squat_bb",
-          "name": "Приседания со штангой",
-          "scheme": "4×5",
-          "sets": 4,
-          "default_reps": "5",
-          "weighted": true,
-          "groups": ["quads", "glutes"],
+          "groups": [
+            "quads",
+            "glutes"
+          ],
           "rest_sec": 210
         },
         {
@@ -158,124 +27,335 @@
           "sets": 3,
           "default_reps": "8",
           "weighted": true,
-          "groups": ["hamstrings", "glutes", "back"],
+          "groups": [
+            "hamstrings",
+            "glutes",
+            "back"
+          ],
           "rest_sec": 180
         },
         {
-          "id": "leg_press",
-          "name": "Жим ногами",
-          "scheme": "3×10–12",
+          "id": "press_db_incline",
+          "name": "Жим гантелей под углом",
+          "scheme": "3×8–10",
           "sets": 3,
-          "default_reps": "12",
+          "default_reps": "10",
           "weighted": true,
-          "groups": ["quads", "glutes"],
+          "groups": [
+            "chest",
+            "front_delts",
+            "triceps"
+          ],
           "rest_sec": 150
         },
         {
-          "id": "lunge_db",
-          "name": "Выпады с гантелями",
-          "scheme": "3×10/нога",
-          "sets": 3,
-          "default_reps": "10/нога",
-          "weighted": true,
-          "groups": ["quads", "glutes"],
-          "rest_sec": 120
-        },
-        {
-          "id": "leg_curl",
-          "name": "Сгибания ног лёжа",
-          "scheme": "3×12",
+          "id": "leg_extension",
+          "name": "Разгибание ног",
+          "scheme": "3×12–15",
           "sets": 3,
           "default_reps": "12",
           "weighted": true,
-          "groups": ["hamstrings"],
+          "groups": [
+            "quads"
+          ],
           "rest_sec": 90
         },
         {
-          "id": "calf_raise",
-          "name": "Подъёмы на носки",
-          "scheme": "4×15",
-          "sets": 4,
-          "default_reps": "15",
+          "id": "box_jump",
+          "name": "Прыжки на тумбу",
+          "scheme": "3×5",
+          "sets": 3,
+          "default_reps": "5",
+          "weighted": false,
+          "groups": [
+            "quads",
+            "glutes",
+            "calves"
+          ],
+          "rest_sec": 90
+        },
+        {
+          "id": "russian_twist",
+          "name": "Русские скручивания с блином",
+          "scheme": "3×16",
+          "sets": 3,
+          "default_reps": "16",
           "weighted": true,
-          "groups": ["calves"],
+          "groups": [
+            "core"
+          ],
           "rest_sec": 60
         }
       ]
     },
     {
-      "id": "d4",
-      "name": "Плечи и руки",
-      "muscles": "Дельты · бицепс · трицепс · пресс",
+      "id": "back_shoulders",
+      "name": "Спина + плечи",
+      "muscles": "Широчайшие · спина · дельты · пресс",
       "exercises": [
         {
           "id": "ohp_bb",
-          "name": "Жим стоя со штангой",
-          "scheme": "4×6",
+          "name": "Жим штанги стоя",
+          "scheme": "4×6–8",
           "sets": 4,
-          "default_reps": "6",
+          "default_reps": "8",
           "weighted": true,
-          "groups": ["front_delts", "side_delts", "triceps"],
+          "groups": [
+            "front_delts",
+            "side_delts",
+            "triceps"
+          ],
           "rest_sec": 180
         },
         {
-          "id": "lateral_raise",
-          "name": "Махи гантелями в стороны",
-          "scheme": "4×12–15",
+          "id": "pullup",
+          "name": "Подтягивания",
+          "scheme": "4×почти-отказ",
           "sets": 4,
+          "default_reps": "8",
+          "weighted": false,
+          "groups": [
+            "lats",
+            "biceps"
+          ],
+          "rest_sec": 150
+        },
+        {
+          "id": "row_cable",
+          "name": "Горизонтальная тяга",
+          "scheme": "3×8–10",
+          "sets": 3,
+          "default_reps": "10",
+          "weighted": true,
+          "groups": [
+            "back",
+            "lats",
+            "biceps"
+          ],
+          "rest_sec": 120
+        },
+        {
+          "id": "lateral_raise",
+          "name": "Махи в стороны",
+          "scheme": "3×12–15",
+          "sets": 3,
           "default_reps": "12",
           "weighted": true,
-          "groups": ["side_delts"],
+          "groups": [
+            "side_delts"
+          ],
           "rest_sec": 75
         },
         {
-          "id": "rear_delt_fly",
-          "name": "Махи в наклоне",
-          "scheme": "3×15",
-          "sets": 3,
-          "default_reps": "15",
-          "weighted": true,
-          "groups": ["rear_delts"],
-          "rest_sec": 75
-        },
-        {
-          "id": "shrug_db",
-          "name": "Шраги с гантелями",
-          "scheme": "3×12",
+          "id": "face_pull",
+          "name": "Face pull",
+          "scheme": "3×12–15",
           "sets": 3,
           "default_reps": "12",
           "weighted": true,
-          "groups": ["traps"],
+          "groups": [
+            "rear_delts",
+            "traps"
+          ],
+          "rest_sec": 75
+        },
+        {
+          "id": "overhead_carry",
+          "name": "Прогулка с гирей над головой",
+          "scheme": "3×30 м",
+          "sets": 3,
+          "default_reps": "30м",
+          "weighted": true,
+          "groups": [
+            "side_delts",
+            "front_delts",
+            "core",
+            "traps"
+          ],
           "rest_sec": 90
         },
         {
-          "id": "triceps_pushdown",
-          "name": "Разгибания на блоке",
-          "scheme": "3×12",
+          "id": "plank",
+          "name": "Планка",
+          "scheme": "3×30–40 с",
+          "sets": 3,
+          "default_reps": "30с",
+          "weighted": false,
+          "groups": [
+            "core"
+          ],
+          "rest_sec": 60
+        }
+      ]
+    },
+    {
+      "id": "chest_lower",
+      "name": "Грудь + низ",
+      "muscles": "Грудь · трицепс · ноги",
+      "exercises": [
+        {
+          "id": "bench_bb",
+          "name": "Жим лёжа",
+          "scheme": "4×6–8",
+          "sets": 4,
+          "default_reps": "8",
+          "weighted": true,
+          "groups": [
+            "chest",
+            "triceps",
+            "front_delts"
+          ],
+          "rest_sec": 180
+        },
+        {
+          "id": "lunge_db",
+          "name": "Выпады с гантелями",
+          "scheme": "3×10 на ногу",
+          "sets": 3,
+          "default_reps": "10/нога",
+          "weighted": true,
+          "groups": [
+            "quads",
+            "glutes"
+          ],
+          "rest_sec": 120
+        },
+        {
+          "id": "dips",
+          "name": "Брусья или узкий жим",
+          "scheme": "3×8–12",
+          "sets": 3,
+          "default_reps": "10",
+          "weighted": true,
+          "groups": [
+            "chest",
+            "triceps"
+          ],
+          "rest_sec": 120
+        },
+        {
+          "id": "fly_cable",
+          "name": "Разведения в кроссовере",
+          "scheme": "3×12–15",
           "sets": 3,
           "default_reps": "12",
           "weighted": true,
-          "groups": ["triceps"],
-          "rest_sec": 75
+          "groups": [
+            "chest"
+          ],
+          "rest_sec": 90
         },
         {
-          "id": "curl_preacher",
-          "name": "Бицепс на скамье Скотта",
-          "scheme": "3×12",
+          "id": "leg_curl",
+          "name": "Сгибание ног",
+          "scheme": "3×12–15",
           "sets": 3,
           "default_reps": "12",
           "weighted": true,
-          "groups": ["biceps"],
-          "rest_sec": 75
+          "groups": [
+            "hamstrings"
+          ],
+          "rest_sec": 90
         },
         {
-          "id": "crunch_cable",
-          "name": "Скручивания на блоке",
-          "scheme": "3×15",
-          "sets": 3,
+          "id": "kb_swing",
+          "name": "Махи гирей/гантелью",
+          "scheme": "4×15",
+          "sets": 4,
           "default_reps": "15",
           "weighted": true,
-          "groups": ["core"],
+          "groups": [
+            "glutes",
+            "hamstrings",
+            "back",
+            "core"
+          ],
+          "rest_sec": 60
+        }
+      ]
+    },
+    {
+      "id": "back_arms",
+      "name": "Спина + руки",
+      "muscles": "Спина · бицепс · дельты · пресс",
+      "exercises": [
+        {
+          "id": "row_bb",
+          "name": "Тяга штанги в наклоне",
+          "scheme": "4×6–8",
+          "sets": 4,
+          "default_reps": "8",
+          "weighted": true,
+          "groups": [
+            "back",
+            "lats",
+            "biceps"
+          ],
+          "rest_sec": 180
+        },
+        {
+          "id": "lat_pulldown",
+          "name": "Верхний блок или подтягивания",
+          "scheme": "3×8–10",
+          "sets": 3,
+          "default_reps": "10",
+          "weighted": true,
+          "groups": [
+            "lats",
+            "biceps"
+          ],
+          "rest_sec": 120
+        },
+        {
+          "id": "curl_bb",
+          "name": "Подъём штанги на бицепс",
+          "scheme": "3×10–12",
+          "sets": 3,
+          "default_reps": "12",
+          "weighted": true,
+          "groups": [
+            "biceps"
+          ],
+          "rest_sec": 90
+        },
+        {
+          "id": "lateral_rear_ss",
+          "name": "Махи в стороны + задняя дельта",
+          "scheme": "3×12",
+          "sets": 3,
+          "default_reps": "12",
+          "weighted": true,
+          "groups": [
+            "side_delts",
+            "rear_delts"
+          ],
+          "rest_sec": 90
+        },
+        {
+          "id": "farmer_walk",
+          "name": "Прогулка фермера",
+          "scheme": "3×40 м",
+          "sets": 3,
+          "default_reps": "40м",
+          "weighted": true,
+          "groups": [
+            "forearms",
+            "traps",
+            "core"
+          ],
+          "rest_sec": 90
+        },
+        {
+          "id": "hanging_leg_raise",
+          "name": "Подъём ног в висе",
+          "scheme": "3×12",
+          "sets": 3,
+          "default_reps": "12",
+          "weighted": false,
+          "groups": [
+            "core",
+            "forearms"
+          ],
           "rest_sec": 60
         }
       ]
