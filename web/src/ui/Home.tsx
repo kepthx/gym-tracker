@@ -1,6 +1,7 @@
 import { deleteWorkout, startWorkout } from '../state/actions'
 import { currentProgram, getState, navigate, programFor } from '../state/store'
 import { doneCount, draft, history, lastDoneAt, setsOf } from '../state/selectors'
+import { exportUrl } from '../sync/client'
 import { ConfirmInline } from './ConfirmInline'
 import { fmtDate, fmtStarted, plural, workoutsRecorded } from './format'
 import { SaveStatusBar, SaveStatusChip } from './SaveStatus'
@@ -73,7 +74,7 @@ export function HomeScreen({ onLogout }: { onLogout: () => void }) {
           <div class="section-gap" />
 
           <div class="home-footer">
-            <a class="btn btn-quiet" href="/api/export" download>
+            <a class="btn btn-quiet" href={exportUrl()} download>
               Выгрузить всё (JSON)
             </a>
             <button class="btn btn-quiet" onClick={() => navigate({ name: 'diagnostics' })}>

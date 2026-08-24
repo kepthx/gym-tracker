@@ -12,7 +12,7 @@ import {
   subscribe,
 } from './state/store'
 import { draft } from './state/selectors'
-import { ApiError, logout, me, OfflineError, setBearerToken } from './sync/client'
+import { ApiError, logout, me, OfflineError, programUrl, setBearerToken } from './sync/client'
 import { engine } from './sync/engine'
 import { DiagnosticsScreen } from './ui/Diagnostics'
 import { HomeScreen } from './ui/Home'
@@ -125,7 +125,7 @@ async function requestPersistentStorage(): Promise<void> {
 /** The current program comes separately: the sync delta carries no marker of which one is active. */
 async function refreshProgramHash(): Promise<void> {
   try {
-    const response = await fetch('/api/program', { credentials: 'same-origin' })
+    const response = await fetch(programUrl(), { credentials: 'same-origin' })
     if (!response.ok) return
     const body = (await response.json()) as { hash: string }
     await setCurrentProgramHash(body.hash)

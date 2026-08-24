@@ -1,6 +1,10 @@
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  // The app can be served under a path prefix behind a reverse proxy. Everything that
+  // builds a URL derives it from this, so the same source works at the root of a domain
+  // and under a prefix, with no hardcoded path anywhere.
+  base: process.env.GYM_BASE ?? '/',
   esbuild: {
     jsx: 'automatic',
     jsxImportSource: 'preact',

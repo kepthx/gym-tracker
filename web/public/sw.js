@@ -10,11 +10,21 @@
  * worker would gain nothing while adding a second copy of the state.
  */
 
+/*
+ * The base the app is served under, derived from where this file itself sits: at /sw.js it
+ * is "/", at /gym/sw.js it is "/gym/". This file is copied verbatim from public/, so Vite's
+ * base rewriting never reaches it — reading the location is what keeps the worker in step
+ * with the rest of the app instead of silently caching the wrong paths.
+ *
+ * It matches the worker's own scope, which the browser fixes to this directory.
+ */
+const BASE = new URL('./', self.location).pathname
+
 const SHELL = 'shell-v1'
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(SHELL).then((cache) => cache.addAll(['/'])).then(() => self.skipWaiting()),
+    caches.open(SHELL).then((cache) => cache.addAll([BASE])).then(() => self.skipWaiting()),
   )
 })
 
@@ -34,11 +44,11 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url)
   if (url.origin !== self.location.origin) return
   // Under no circumstances.
-  if (url.pathname.startsWith('/api/')) return
+  if (url.pathname.startsWith(`${BASE}api/`)) return
 
   // Build output carries a content hash in the filename, so those files are immutable:
   // serving them from cache is safe, and safe forever.
-  if (url.pathname.startsWith('/assets/')) {
+  if (url.pathname.startsWith(`${BASE}assets/`)) {
     event.respondWith(
       caches.match(request).then(
         (hit) =>
@@ -62,10 +72,10 @@ self.addEventListener('fetch', (event) => {
       .then((response) => {
         if (response.ok) {
           const copy = response.clone()
-          void caches.open(SHELL).then((cache) => cache.put('/', copy))
+          void caches.open(SHELL).then((cache) => cache.put(BASE, copy))
         }
         return response
       })
-      .catch(() => caches.match(request).then((hit) => hit ?? caches.match('/'))),
+      .catch(() => caches.match(request).then((hit) => hit ?? caches.match(BASE))),
   )
 })

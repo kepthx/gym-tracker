@@ -28,6 +28,13 @@ export class OfflineError extends Error {
   }
 }
 
+/**
+ * The API lives under the same base path the app is served from, so the app works both at
+ * the root of a domain and behind a reverse proxy under a prefix. Vite's BASE_URL always
+ * ends with a slash.
+ */
+const API = `${import.meta.env.BASE_URL}api`
+
 let bearer: string | null = null
 
 /** Fallback path to the token for when the cookie is gone but the copy in storage remains. */
@@ -79,15 +86,15 @@ export interface SessionInfo {
 export function login(password: string, username?: string): Promise<SessionInfo> {
   const body: Record<string, string> = { password }
   if (username) body.username = username
-  return request<SessionInfo>('/api/auth/login', { method: 'POST', body: JSON.stringify(body) })
+  return request<SessionInfo>(`${API}/auth/login`, { method: 'POST', body: JSON.stringify(body) })
 }
 
 export function logout(): Promise<void> {
-  return request<void>('/api/auth/logout', { method: 'POST' })
+  return request<void>(`${API}/auth/logout`, { method: 'POST' })
 }
 
 export function me(): Promise<SessionInfo> {
-  return request<SessionInfo>('/api/auth/me')
+  return request<SessionInfo>(`${API}/auth/me`)
 }
 
 export interface SyncRequest {
@@ -98,15 +105,19 @@ export interface SyncRequest {
 }
 
 export function postSync(body: SyncRequest): Promise<SyncResponse> {
-  return request<SyncResponse>('/api/sync', { method: 'POST', body: JSON.stringify(body) })
+  return request<SyncResponse>(`${API}/sync`, { method: 'POST', body: JSON.stringify(body) })
 }
 
 export function getSync(since: number, knownPrograms: string[]): Promise<SyncResponse> {
   const params = new URLSearchParams({ since: String(since) })
   for (const hash of knownPrograms) params.append('known_program', hash)
-  return request<SyncResponse>(`/api/sync?${params}`)
+  return request<SyncResponse>(`${API}/sync?${params}`)
+}
+
+export function programUrl(): string {
+  return `${API}/program`
 }
 
 export function exportUrl(): string {
-  return '/api/export'
+  return `${API}/export`
 }
