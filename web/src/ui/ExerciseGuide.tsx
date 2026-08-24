@@ -95,11 +95,13 @@ function VideoFrame({
         src={src}
         title={title}
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-        // no-referrer, not strict-origin: the document policy is same-origin, which sends
-        // nothing off-site, and a per-element policy here would only ever loosen it. The
-        // player does not need a referrer, and CONTEXT.md §9 says nothing about the user
-        // is sent anywhere.
-        referrerpolicy="no-referrer"
+        // REQUIRED, and the tightest value that works. The embedded player identifies the
+        // embedding site by the Referer header and refuses to play without one — "Ошибка
+        // 153. Ошибка настройки видеопроигрывателя", which is what no-referrer produced
+        // here. This attribute overrides the document's same-origin policy for this one
+        // request, and cross-origin it sends the bare origin: no path, no query, nothing
+        // about which exercise was opened or who opened it. CONTEXT.md §9 still holds.
+        referrerpolicy="strict-origin-when-cross-origin"
         loading="lazy"
       />
     )

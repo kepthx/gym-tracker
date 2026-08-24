@@ -60,6 +60,14 @@ test('справка раскрывается в карточке и до наж
     // playsinline: without it iOS takes the video full screen and throws the user out of
     // the workout.
     await expect(frame).toHaveAttribute('src', /playsinline=1/)
+
+    // The referrer is not optional. The embedded player identifies the embedding site by
+    // the Referer header and refuses with "Ошибка 153. Ошибка настройки видеопроигрывателя"
+    // when it gets none — which is exactly what no-referrer did in production. The document
+    // policy is same-origin, so this attribute is the only thing that lets the origin
+    // through, and it must send no more than the origin. Nothing in this file talks to
+    // YouTube, so this assertion is what stands in for the player refusing to load.
+    await expect(frame).toHaveAttribute('referrerpolicy', 'strict-origin-when-cross-origin')
   })
 
   await test.step('свернуть — кадр исчезает', async () => {
