@@ -108,17 +108,18 @@
           "rest_sec": 180
         },
         {
-          "id": "pullup",
-          "name": "Подтягивания",
-          "scheme": "4×почти-отказ",
+          "id": "pullup_assisted",
+          "name": "Подтягивания в гравитроне",
+          "scheme": "4×8–10",
           "sets": 4,
           "default_reps": "8",
-          "weighted": false,
+          "weighted": true,
           "groups": [
             "lats",
             "biceps"
           ],
-          "rest_sec": 150
+          "rest_sec": 150,
+          "lower_is_better": true
         },
         {
           "id": "row_cable",
@@ -295,7 +296,7 @@
         },
         {
           "id": "lat_pulldown",
-          "name": "Верхний блок или подтягивания",
+          "name": "Тяга верхнего блока",
           "scheme": "3×8–10",
           "sets": 3,
           "default_reps": "10",
