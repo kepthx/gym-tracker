@@ -17,6 +17,7 @@ const env = {
   GYM_DB: join(dataDir, 'gymtracker.db'),
   GYM_BACKUP_DIR: join(dataDir, 'backups'),
   GYM_PROGRAMS: join(root, 'programs'),
+  GYM_GUIDES: join(root, 'guides', 'exercises.json'),
   GYM_ADDR: `127.0.0.1:${port}`,
 }
 

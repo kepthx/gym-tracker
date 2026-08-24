@@ -36,6 +36,10 @@ export type MetaKey =
   | 'seq'
   | 'clock_skew'
   | 'current_program'
+  // The technique reference and its ETag. It sits in meta rather than in a store of its own
+  // on purpose: one small object needs no schema migration, and meta exists for exactly this.
+  | 'guides'
+  | 'guides_etag'
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -135,9 +139,21 @@ export async function getMeta<T>(key: MetaKey): Promise<T | undefined> {
 }
 
 export async function setMeta(key: MetaKey, value: unknown): Promise<void> {
+  return setMetaMany({ [key]: value })
+}
+
+/**
+ * Several meta keys in one transaction: either all of them land or none do.
+ *
+ * Two awaited setMeta calls are two commits, and a kill between them leaves the pair
+ * disagreeing — a payload stored under an ETag that was never persisted, so the next boot
+ * asks conditionally for a body it does not have and is told it is up to date.
+ */
+export async function setMetaMany(entries: Partial<Record<MetaKey, unknown>>): Promise<void> {
   const db = await openDB()
   const tx = db.transaction(STORE.meta, 'readwrite')
-  tx.objectStore(STORE.meta).put(value, key)
+  const store = tx.objectStore(STORE.meta)
+  for (const [key, value] of Object.entries(entries)) store.put(value, key)
   await done(tx)
 }
 

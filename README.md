@@ -66,7 +66,9 @@ internal/
   db/                  two connection pools, pragmas, embedded migrations
   store/sync.go        the sync core: idempotence, LWW, conflict resolution
   store/changes.go     cursor-based delta selection
+  confload/            what programs and guides share: id alphabet, strict decode, hashing
   program/             loading, validating and hashing programs
+  guide/               loading, validating and hashing the exercise technique reference
   api/                 routes, authentication, brute-force limiting
   backup/              backups via VACUUM INTO with an integrity check
   server/              listeners: plain, and TLS with automatic certificates
@@ -77,7 +79,9 @@ web/src/
   sync/engine.ts       queue draining, backoff, save status
   ui/                  screens
 testdata/merge_cases.json   truth table shared by Go and TypeScript
+testdata/youtube_ids.json   the same, for the video id rule
 programs/              training programs, one file per user
+guides/exercises.json  the technique reference, one file for everyone
 deploy/                systemd unit and deployment instructions
 ```
 

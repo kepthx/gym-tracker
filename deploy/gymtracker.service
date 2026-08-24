@@ -27,6 +27,7 @@ Environment=GYM_DB=/var/lib/gymtracker/gymtracker.db
 Environment=GYM_BACKUP_DIR=/var/lib/gymtracker/backups
 Environment=GYM_CERT_DIR=/var/lib/gymtracker/autocert
 Environment=GYM_PROGRAMS=/opt/gymtracker/programs
+Environment=GYM_GUIDES=/opt/gymtracker/guides/exercises.json
 # Domain, email, and — on the first deployment — Let's Encrypt's staging directory.
 EnvironmentFile=/opt/gymtracker/.env
 

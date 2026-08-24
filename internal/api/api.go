@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"sync/atomic"
 	"time"
 
+	"github.com/kepthx/gym-tracker/internal/guide"
 	"github.com/kepthx/gym-tracker/internal/store"
 )
 
@@ -22,6 +24,11 @@ type Deps struct {
 	Version   string
 	// ReloadPrograms rereads the programs directory and returns who got attached to what.
 	ReloadPrograms func(ctx context.Context) (map[string]string, error)
+	// Guides is the exercise technique reference served at /api/guides. Never nil in
+	// production; New substitutes an empty set when it is.
+	Guides *guide.Set
+	// ReloadGuides rereads the guides file from disk and returns the fresh set.
+	ReloadGuides func() (*guide.Set, error)
 }
 
 // Backups is what the API needs to know about backups.
@@ -45,13 +52,18 @@ type API struct {
 	version        string
 	startedAt      time.Time
 	reloadPrograms func(ctx context.Context) (map[string]string, error)
+
+	// guides is swapped wholesale by the admin reload while requests are being served, so
+	// it is read through an atomic pointer rather than a lock: readers never block.
+	guides       atomic.Pointer[guide.Set]
+	reloadGuides func() (*guide.Set, error)
 }
 
 func New(deps Deps) *API {
 	if deps.DebugAuth {
 		slog.Warn("включена заглушка аутентификации — только для разработки")
 	}
-	return &API{
+	a := &API{
 		store:    deps.Store,
 		tokenTTL: deps.TokenTTL,
 
@@ -60,12 +72,19 @@ func New(deps Deps) *API {
 		version:        deps.Version,
 		startedAt:      time.Now(),
 		reloadPrograms: deps.ReloadPrograms,
+		reloadGuides:   deps.ReloadGuides,
 		// Five attempts in a row, then one every ten seconds. Someone who forgot their
 		// password will not notice the difference; brute force becomes pointless.
 		loginLimiter: newIPLimiter(10*time.Second, 5),
 		debugAuth:    deps.DebugAuth,
 		loginDelay:   defaultLoginDelay,
 	}
+	if deps.Guides != nil {
+		a.guides.Store(deps.Guides)
+	} else {
+		a.guides.Store(guide.Empty())
+	}
+	return a
 }
 
 type errorBody struct {

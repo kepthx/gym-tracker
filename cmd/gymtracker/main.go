@@ -16,6 +16,7 @@ import (
 	"github.com/kepthx/gym-tracker/internal/backup"
 	"github.com/kepthx/gym-tracker/internal/config"
 	"github.com/kepthx/gym-tracker/internal/db"
+	"github.com/kepthx/gym-tracker/internal/guide"
 	"github.com/kepthx/gym-tracker/internal/program"
 	"github.com/kepthx/gym-tracker/internal/server"
 	"github.com/kepthx/gym-tracker/internal/store"
@@ -77,6 +78,14 @@ func serve(ctx context.Context) error {
 		return err
 	}
 
+	// A broken guides file stops startup for the same reason a broken program does: it is
+	// edited by hand, and a silent half-load is harder to notice than a refusal to come up.
+	guides, err := guide.Load(cfg.GuidesPath)
+	if err != nil {
+		return err
+	}
+	slog.Info("справочник загружен", "упражнений", len(guides.File.Exercises), "файл", cfg.GuidesPath)
+
 	st := store.New(database)
 	report, err := st.SyncPrograms(ctx, snapshots)
 	if err != nil {
@@ -108,6 +117,13 @@ func serve(ctx context.Context) error {
 			}
 			logProgramReport(report)
 			return report.Attached, nil
+		},
+		Guides: guides,
+		ReloadGuides: func() (*guide.Set, error) {
+			// Fixing a technique cue means editing a file plus this call. No code change.
+			// Reload, not Load: a file that has gone missing must fail here rather than
+			// quietly reload as empty and wipe the reference off every device.
+			return guide.Reload(cfg.GuidesPath)
 		},
 	}).Routes(mux)
 

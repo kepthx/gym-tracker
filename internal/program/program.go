@@ -7,20 +7,14 @@
 package program
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
-)
 
-// idRe constrains day and exercise identifiers. The narrow alphabet is deliberate: ids
-// end up in history keys and in URLs, and any ambiguity there is expensive.
-var idRe = regexp.MustCompile(`^[a-z0-9_]{1,40}$`)
+	"github.com/kepthx/gym-tracker/internal/confload"
+)
 
 // SupportedVersion is the version of the program file format.
 const SupportedVersion = 1
@@ -99,47 +93,39 @@ func (d *Day) TotalSets() int {
 	return total
 }
 
-// ValidationError collects every violation at once: fixing a program one error per
-// restart is a poor way to spend an evening.
-type ValidationError struct {
-	Source   string
-	Problems []string
-}
-
-func (e *ValidationError) Error() string {
-	return fmt.Sprintf("программа %s не прошла проверку:\n  - %s",
-		e.Source, strings.Join(e.Problems, "\n  - "))
+// validationError reports every problem in one error. Only the wording lives here: the
+// Russian verb agrees with "программа", which is why confload takes the headline rather
+// than composing it.
+func validationError(source string, problems []string) error {
+	return &confload.ValidationError{
+		Headline: fmt.Sprintf("программа %s не прошла проверку", source),
+		Source:   source,
+		Problems: problems,
+	}
 }
 
 // Parse parses and validates a program, returning a snapshot with canonical JSON and a hash.
 func Parse(source string, raw []byte) (*Snapshot, error) {
 	var p Program
-	decoder := json.NewDecoder(strings.NewReader(string(raw)))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&p); err != nil {
-		return nil, &ValidationError{Source: source, Problems: []string{
+	if err := confload.Decode(raw, &p); err != nil {
+		return nil, validationError(source, []string{
 			fmt.Sprintf("не разбирается как JSON программы: %v", err),
-		}}
+		})
 	}
 
 	if problems := validate(&p); len(problems) > 0 {
-		return nil, &ValidationError{Source: source, Problems: problems}
+		return nil, validationError(source, problems)
 	}
 
 	// Canonicalisation by re-marshalling: field order comes from the struct declaration,
 	// and the file's indentation and line breaks are discarded. So reformatting the file
 	// does not produce a new snapshot and does not breed rows in programs.
-	canonical, err := json.Marshal(&p)
+	hash, canonical, err := confload.Canonical(&p)
 	if err != nil {
 		return nil, fmt.Errorf("канонизировать программу %s: %w", source, err)
 	}
-	sum := sha256.Sum256(canonical)
 
-	return &Snapshot{
-		Hash:      hex.EncodeToString(sum[:]),
-		Canonical: canonical,
-		Program:   &p,
-	}, nil
+	return &Snapshot{Hash: hash, Canonical: canonical, Program: &p}, nil
 }
 
 func validate(p *Program) []string {
@@ -165,9 +151,9 @@ func validate(p *Program) []string {
 		switch {
 		case day.ID == "":
 			problems = append(problems, where+": пустой id")
-		case !idRe.MatchString(day.ID):
+		case !confload.IDRe.MatchString(day.ID):
 			problems = append(problems, fmt.Sprintf(
-				"%s: id не подходит под %s", where, idRe))
+				"%s: id не подходит под %s", where, confload.IDRe))
 		}
 		if first, dup := dayIDs[day.ID]; dup && day.ID != "" {
 			problems = append(problems, fmt.Sprintf(
@@ -189,9 +175,9 @@ func validate(p *Program) []string {
 			switch {
 			case ex.ID == "":
 				problems = append(problems, exWhere+": пустой id")
-			case !idRe.MatchString(ex.ID):
+			case !confload.IDRe.MatchString(ex.ID):
 				problems = append(problems, fmt.Sprintf(
-					"%s: id не подходит под %s", exWhere, idRe))
+					"%s: id не подходит под %s", exWhere, confload.IDRe))
 			}
 			// An exercise id is unique across the whole program, not within a day: all
 			// history and every chart hang off it, and one id has to mean exactly one

@@ -42,21 +42,32 @@ Cross-compilation works without a toolchain: the SQLite driver is pure Go and cg
 
 ```bash
 sudo useradd --system --home /opt/gymtracker --shell /usr/sbin/nologin gymtracker
-sudo mkdir -p /opt/gymtracker/programs
+sudo mkdir -p /opt/gymtracker/programs /opt/gymtracker/guides
 ```
 
 ## 3. Files
 
 ```bash
+ssh server 'mkdir -p /tmp/gym-deploy/programs /tmp/gym-deploy/guides'
+
 scp dist/gymtracker-linux-amd64 server:/tmp/gymtracker
-scp programs/*.json             server:/tmp/
 scp deploy/gymtracker.service   server:/tmp/
+scp programs/*.json             server:/tmp/gym-deploy/programs/
+scp guides/exercises.json       server:/tmp/gym-deploy/guides/
 
 # on the server
 sudo install -m 755 -o gymtracker -g gymtracker /tmp/gymtracker /opt/gymtracker/gymtracker
-sudo install -m 640 -o gymtracker -g gymtracker /tmp/*.json     /opt/gymtracker/programs/
+sudo install -m 640 -o gymtracker -g gymtracker \
+     /tmp/gym-deploy/programs/*.json /opt/gymtracker/programs/
+sudo install -m 640 -o gymtracker -g gymtracker \
+     /tmp/gym-deploy/guides/exercises.json /opt/gymtracker/guides/exercises.json
 sudo install -m 644 /tmp/gymtracker.service /etc/systemd/system/
 ```
+
+The two staging directories are not ceremony. **Every `*.json` in `/opt/gymtracker/programs/`
+is parsed as somebody's program, and one file that is not a program aborts startup** — so the
+guides file must never be copied there by a wildcard. Staging the two kinds separately is what
+keeps a single `install` glob from picking up the wrong one.
 
 ## 4. Configuration
 
@@ -183,6 +194,25 @@ a new id. Never reuse a freed id for a different exercise, or a squat and a benc
 be glued into one chart. Data for exercises that dropped out of the program stays in the
 database and in the export, and history keeps rendering from the snapshot of the program it
 was recorded against.
+
+## Changing the exercise guides
+
+The technique reference is `guides/exercises.json` — one file for everyone, keyed by
+`exercise_id`. It is deliberately not part of the program: a program is hashed and history
+hangs off that hash, so prose in there would mint a new snapshot on every comma.
+
+```bash
+sudo -u gymtracker vi /opt/gymtracker/guides/exercises.json
+curl -sf -b cookies.txt -X POST https://your-domain/api/admin/guides/reload
+```
+
+Same rules as a program: a broken file stops startup and names every violation at once; on
+reload it returns 422 and leaves the previous reference in place. A missing file is not an
+error — the cards simply have nothing to expand.
+
+`youtube_id` is the eleven-character video id, **never a URL**: it is substituted into the
+src of an iframe, and the URL is assembled in code. An exercise with no guide, and a guide
+for an exercise no longer in the program, are both fine.
 
 ## Updating
 

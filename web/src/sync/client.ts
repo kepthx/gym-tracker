@@ -1,4 +1,4 @@
-import type { Op, SyncResponse, User } from '../types'
+import type { ExerciseGuide, Op, SyncResponse, User } from '../types'
 
 export class ApiError extends Error {
   readonly status: number
@@ -54,7 +54,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new OfflineError(err)
   }
 
-  if (response.status === 204) return undefined as T
+  // 304 is an answer, not a failure: the caller asked conditionally and already holds the
+  // body. Only the conditional endpoints can ever see it.
+  if (response.status === 204 || response.status === 304) return undefined as T
 
   const text = await response.text()
   let body: unknown = null
@@ -114,8 +116,27 @@ export function getSync(since: number, knownPrograms: string[]): Promise<SyncRes
   return request<SyncResponse>(`${API}/sync?${params}`)
 }
 
-export function programUrl(): string {
-  return `${API}/program`
+export function getProgramHash(): Promise<{ hash: string }> {
+  return request<{ hash: string }>(`${API}/program`)
+}
+
+export interface GuidesResponse {
+  hash: string
+  guides: { exercises?: Record<string, ExerciseGuide> }
+}
+
+/**
+ * The technique reference, as a conditional request. null means 304 — nothing changed, which
+ * is the usual answer and costs no traffic at the gym.
+ *
+ * It goes through request() like every other call rather than reaching for fetch directly,
+ * so it carries the same credentials: the bearer fallback exists for the iOS case where the
+ * cookie is gone but the copy in storage remains, and a hand-rolled fetch would answer 401
+ * on exactly the device class the guides were written for.
+ */
+export async function getGuides(etag: string): Promise<GuidesResponse | null> {
+  const init = etag ? { headers: { 'If-None-Match': etag } } : {}
+  return (await request<GuidesResponse | undefined>(`${API}/guides`, init)) ?? null
 }
 
 export function exportUrl(): string {

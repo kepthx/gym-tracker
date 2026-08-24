@@ -19,12 +19,12 @@ test('тренировка переживает офлайн и перезапу
   await test.step('вход', async () => {
     await page.getByPlaceholder('Пароль').fill(PASSWORD)
     await page.getByRole('button', { name: 'Войти' }).click()
-    await expect(page.getByRole('button', { name: /1\. Жим/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /1\. Ноги/ })).toBeVisible()
   })
 
   await test.step('начать тренировку', async () => {
-    await page.getByRole('button', { name: /1\. Жим/ }).click()
-    await expect(page.getByText('Жим лёжа со штангой')).toBeVisible()
+    await page.getByRole('button', { name: /1\. Ноги/ }).click()
+    await expect(page.getByText('Присед со штангой')).toBeVisible()
   })
 
   await test.step('уйти в офлайн', async () => {
@@ -59,7 +59,7 @@ test('тренировка переживает офлайн и перезапу
   await test.step('перезапуск приложения посреди тренировки', async () => {
     await page.reload()
     // The screen restores from local storage, without a single request to the server.
-    await expect(page.getByText('Жим лёжа со штангой')).toBeVisible()
+    await expect(page.getByText('Присед со штангой')).toBeVisible()
   })
 
   await test.step('всё на месте', async () => {
@@ -92,7 +92,7 @@ test('тренировка переживает офлайн и перезапу
 
   await test.step('завершить тренировку', async () => {
     await page.getByRole('button', { name: 'Завершить тренировку' }).click()
-    await expect(page.getByRole('button', { name: /1\. Жим/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /1\. Ноги/ })).toBeVisible()
     await expect(page.getByText('Незавершённая тренировка')).toHaveCount(0)
   })
 })
@@ -102,7 +102,7 @@ test('выход из тренировки требует подтвержден
   await page.getByPlaceholder('Пароль').fill(PASSWORD)
   await page.getByRole('button', { name: 'Войти' }).click()
 
-  await page.getByRole('button', { name: /2\. Тяга/ }).click()
+  await page.getByRole('button', { name: /2\. Спина/ }).click()
   await page.getByRole('button', { name: /^Подход 1$/ }).first().click()
   await page.keyboard.press('Enter')
 
@@ -111,7 +111,7 @@ test('выход из тренировки требует подтвержден
   await page.getByRole('button', { name: '← Выйти' }).click()
   await expect(page.getByText('Выйти без завершения?')).toBeVisible()
   await page.getByRole('button', { name: 'Отмена' }).click()
-  await expect(page.getByText('Тяга штанги в наклоне')).toBeVisible()
+  await expect(page.getByText('Жим штанги стоя')).toBeVisible()
 
   await page.getByRole('button', { name: '← Выйти' }).click()
   await page.getByRole('button', { name: 'Выйти' }).click()
@@ -119,7 +119,7 @@ test('выход из тренировки требует подтвержден
   // The workout is still unfinished and waiting to be resumed — leaving does not delete it.
   await expect(page.getByText('Незавершённая тренировка')).toBeVisible()
   await page.getByRole('button', { name: 'Продолжить' }).click()
-  await expect(page.getByText('Тяга штанги в наклоне')).toBeVisible()
+  await expect(page.getByText('Жим штанги стоя')).toBeVisible()
   await expect(page.locator('.workout-counter')).toHaveText(/^1\//)
   await expect(page.locator('.set-btn-done')).toHaveCount(1)
 })

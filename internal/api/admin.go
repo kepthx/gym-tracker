@@ -114,3 +114,32 @@ func (a *API) postProgramReload(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"attached": attached})
 }
+
+// postGuidesReload rereads the exercise guides file from disk.
+// Fixing a technique cue means editing a file plus this call — no rebuild, no restart.
+func (a *API) postGuidesReload(w http.ResponseWriter, r *http.Request) {
+	if a.reloadGuides == nil {
+		writeError(w, http.StatusServiceUnavailable, "not_supported", "перезагрузка недоступна")
+		return
+	}
+	fresh, err := a.reloadGuides()
+	if err != nil {
+		// A broken or missing file leaves the previous set in place: reference text that
+		// half-loaded is worse than the version that was already there, and an empty one
+		// would propagate to every device on its next conditional request.
+		writeError(w, http.StatusUnprocessableEntity, "invalid_guides", err.Error())
+		return
+	}
+	if fresh == nil {
+		// Nothing in the tree does this, but a nil here would be stored and then panic on
+		// every subsequent GET /api/guides until a restart. New() guards the same field.
+		writeError(w, http.StatusInternalServerError, "internal", "справочник не загружен")
+		return
+	}
+	a.guides.Store(fresh)
+	slog.Info("справочник перезагружен", "упражнений", len(fresh.File.Exercises), "хеш", fresh.Hash)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"hash":      fresh.Hash,
+		"exercises": len(fresh.File.Exercises),
+	})
+}

@@ -105,6 +105,28 @@ export interface Program {
   days: Day[]
 }
 
+/**
+ * The technique reference for one exercise.
+ *
+ * Guides are keyed by exercise_id rather than carried inside the program: a program is
+ * canonicalised and hashed, and history renders from that snapshot, so prose in there would
+ * mint a new snapshot on every comma. An exercise id is forever, which is what lets one
+ * guide serve a workout recorded against a program that has since been replaced.
+ */
+export interface GuideVideo {
+  youtube_id: string
+  start_sec?: number
+  title: string
+  author: string
+}
+
+export interface ExerciseGuide {
+  summary: string
+  cues: string[]
+  mistakes?: string[]
+  video?: GuideVideo
+}
+
 export interface User {
   id: number
   username: string

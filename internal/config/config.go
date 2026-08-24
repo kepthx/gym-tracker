@@ -17,6 +17,9 @@ type Config struct {
 	DBPath string
 	// ProgramsDir is the programs/ directory, with one file per user.
 	ProgramsDir string
+	// GuidesPath is the exercise technique guides file. Kept out of the program files on
+	// purpose: a program is hashed and history hangs off that hash, guides are prose.
+	GuidesPath string
 	// BackupDir is where the copies made by VACUUM INTO are placed.
 	BackupDir string
 	// TokenTTL is the lifetime of a login token. The password cannot be asked for at the
@@ -44,6 +47,7 @@ func Load() (*Config, error) {
 		Addr:        env("GYM_ADDR", ":8080"),
 		DBPath:      env("GYM_DB", filepath.Join("data", "gymtracker.db")),
 		ProgramsDir: env("GYM_PROGRAMS", "programs"),
+		GuidesPath:  env("GYM_GUIDES", filepath.Join("guides", "exercises.json")),
 		BackupDir:   env("GYM_BACKUP_DIR", filepath.Join("data", "backups")),
 		TokenTTL:    180 * 24 * time.Hour,
 		DebugAuth:   os.Getenv("GYM_DEBUG_AUTH") == "1",

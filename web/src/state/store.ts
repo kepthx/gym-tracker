@@ -1,5 +1,5 @@
-import { allPrograms, allSessions, allSets, getMeta, setMeta } from '../db/idb'
-import type { Program, SessionRow, SetRow, User } from '../types'
+import { allPrograms, allSessions, allSets, getMeta, setMeta, setMetaMany } from '../db/idb'
+import type { ExerciseGuide, Program, SessionRow, SetRow, User } from '../types'
 
 export type Screen =
   | { name: 'login' }
@@ -18,6 +18,8 @@ export interface AppState {
   currentProgramHash: string | null
   sessions: SessionRow[]
   sets: SetRow[]
+  /** Technique reference, keyed by exercise_id. Empty until the first successful fetch. */
+  guides: Record<string, ExerciseGuide>
 }
 
 const state: AppState = {
@@ -29,6 +31,7 @@ const state: AppState = {
   currentProgramHash: null,
   sessions: [],
   sets: [],
+  guides: {},
 }
 
 type Listener = () => void
@@ -80,6 +83,38 @@ export async function loadCurrentProgramHash(): Promise<void> {
 /** The program in force at the time of this workout, not the current one. */
 export function programFor(hash: string): Program | null {
   return state.programs.get(hash) ?? null
+}
+
+/**
+ * The technique reference for an exercise, or null when there is none.
+ *
+ * Keyed by exercise_id, which never changes and is never reused, so this answer is right
+ * for a workout recorded against an older program snapshot too.
+ */
+export function guideFor(exerciseID: string): ExerciseGuide | null {
+  // An own-property check, not a bare lookup: an exercise id is only constrained to
+  // [a-z0-9_], and "constructor" passes that. A bare read would return an inherited Object
+  // member, which is truthy, and the card would render it straight into a TypeError.
+  return Object.hasOwn(state.guides, exerciseID) ? (state.guides[exerciseID] ?? null) : null
+}
+
+export async function setGuides(guides: Record<string, ExerciseGuide>, etag: string): Promise<void> {
+  // Storage first, then the screen, and both keys in one transaction. Rendering a response
+  // that was never persisted is the failure mode the whole app is built to avoid, and it is
+  // exactly what a rejected write (quota, degraded storage) would otherwise produce here.
+  await setMetaMany({ guides, guides_etag: etag })
+  state.guides = guides
+  notify()
+}
+
+/**
+ * Reads the reference saved last time.
+ *
+ * It has to happen before any network call: iOS restarts a home-screen app on nearly every
+ * return, and the guide is exactly what gets opened at the gym where there is no signal.
+ */
+export async function loadGuides(): Promise<void> {
+  state.guides = (await getMeta<Record<string, ExerciseGuide>>('guides')) ?? {}
 }
 
 export function currentProgram(): Program | null {

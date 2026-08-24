@@ -12,6 +12,7 @@ import {
 } from '../state/selectors'
 import type { Exercise, SetRow } from '../types'
 import { ConfirmInline } from './ConfirmInline'
+import { ExerciseGuide } from './ExerciseGuide'
 import { fmtDate, fmtSets, fmtWeight, isWeightInputValid, parseWeight } from './format'
 import { SaveStatusBar, SaveStatusChip } from './SaveStatus'
 import './workout.css'
@@ -118,6 +119,7 @@ function ExerciseCard({
 }) {
   const state = getState()
   const [editing, setEditing] = useState<number | null>(null)
+  const [showGuide, setShowGuide] = useState(false)
 
   const mine = sets.filter((s) => s.exercise_id === exercise.id)
   const done = doneCount(mine)
@@ -174,6 +176,21 @@ function ExerciseCard({
           />
         ))}
       </div>
+
+      {/* Both the control and what it opens live below the set row. The card's hierarchy is
+          name → scheme → last result → sets, and the reference is none of those: putting the
+          button up in the head would wedge it between the scheme and the last result, which
+          is the line the user actually reads before choosing today's weight. Down here
+          nothing moves under a finger already aiming at a square, either. */}
+      <button
+        class="guide-toggle"
+        aria-expanded={showGuide}
+        onClick={() => setShowGuide((open) => !open)}
+      >
+        {showGuide ? 'Скрыть технику' : 'Как выполнять'}
+      </button>
+
+      {showGuide && <ExerciseGuide exerciseID={exercise.id} />}
     </section>
   )
 }

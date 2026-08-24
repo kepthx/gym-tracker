@@ -1,0 +1,131 @@
+/* The technique reference, expanded inside an exercise card. Calm and dense: it is read
+   between sets, not browsed. */
+
+.guide-toggle {
+  /* Visually small, but with a target a finger hits. It sits below the set row, so a stray
+     tap during a set never lands here — and if one did, it would expand some text rather
+     than touch anything recorded. */
+  margin-top: 10px;
+  padding: 6px 0;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: color var(--t);
+}
+
+.guide-toggle[aria-expanded='true'] {
+  color: var(--accent);
+}
+
+.guide {
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.guide-missing {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.guide-summary {
+  margin: 0;
+  color: var(--text);
+}
+
+.guide-label {
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.guide-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--text);
+}
+
+.guide-list li {
+  margin-top: 5px;
+}
+
+.guide-list li::marker {
+  color: var(--muted);
+}
+
+/* Amber, the colour this application already uses for "attention". */
+.guide-mistakes li::marker {
+  color: var(--record);
+}
+
+.guide-video {
+  margin-top: 16px;
+}
+
+.guide-video-box {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--field);
+}
+
+/* The facade. No thumbnail is fetched: this box is entirely first-party, and the frame that
+   is not — see ExerciseGuide.tsx — appears only after it is tapped. */
+.guide-video-facade {
+  position: relative;
+  padding: 0;
+  cursor: pointer;
+  transition: border-color var(--t);
+}
+
+.guide-video-facade:active {
+  border-color: var(--accent);
+}
+
+.guide-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 13px 0 13px 22px;
+  border-color: transparent transparent transparent var(--accent);
+}
+
+.guide-video-hint {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.guide-video-offline {
+  padding: 14px var(--pad);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.guide-video-caption {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}

@@ -123,12 +123,22 @@ func secureHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
 		h.Set("X-Content-Type-Options", "nosniff")
+		// same-origin sends no referrer off-site at all — including to the video player,
+		// which is why the iframe must not override this with a laxer per-element policy.
 		h.Set("Referrer-Policy", "same-origin")
-		// Everything is first-party: not one external domain, not one third-party script.
+		// First-party by default, with exactly one exception, spelled out at frame-src
+		// below: no third-party script, style, image, font or connection anywhere.
 		h.Set("Content-Security-Policy",
 			"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "+
 				"img-src 'self' data:; connect-src 'self'; base-uri 'none'; "+
-				"form-action 'self'; frame-ancestors 'none'")
+				"form-action 'self'; frame-ancestors 'none'; "+
+				// The single deliberate exception to the first-party rule: the technique
+				// video in an exercise guide. Nothing else is opened up — no script-src,
+				// no img-src, no connect-src — because the player is a bare iframe with no
+				// YouTube JS API and no thumbnail pulled from ytimg. And the iframe is only
+				// created after an explicit tap on play, so a screen that is merely open
+				// sends Google nothing at all.
+				"frame-src https://www.youtube-nocookie.com")
 		if r.TLS != nil {
 			h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}

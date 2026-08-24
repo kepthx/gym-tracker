@@ -4,15 +4,25 @@ import { initActions } from './state/actions'
 import {
   getState,
   loadCurrentProgramHash,
+  loadGuides,
   navigate,
   patchState,
   reloadFromStorage,
   restoreScreen,
   setCurrentProgramHash,
+  setGuides,
   subscribe,
 } from './state/store'
 import { draft } from './state/selectors'
-import { ApiError, logout, me, OfflineError, programUrl, setBearerToken } from './sync/client'
+import {
+  ApiError,
+  getGuides,
+  getProgramHash,
+  logout,
+  me,
+  OfflineError,
+  setBearerToken,
+} from './sync/client'
 import { engine } from './sync/engine'
 import { DiagnosticsScreen } from './ui/Diagnostics'
 import { HomeScreen } from './ui/Home'
@@ -68,6 +78,7 @@ async function boot(): Promise<void> {
     await requestPersistentStorage()
     await initActions()
     await loadCurrentProgramHash()
+    await loadGuides()
     await reloadFromStorage()
   } catch (err) {
     // Storage did not open. This turns into visible degradation rather than silent data
@@ -86,15 +97,20 @@ async function boot(): Promise<void> {
 
   engine.setOnChanged(() => {
     void reloadFromStorage()
-    void refreshProgramHash()
+    void refreshConfig()
   })
+  // Connectivity returning is a trigger in its own right. The engine listens for it too, but
+  // only to drain the outbox, and a sync that finds nothing to report never reaches
+  // setOnChanged — which would leave a device that first launched offline with no guides
+  // until it is killed and cold-started.
+  addEventListener('online', () => void refreshConfig())
   await engine.init()
 
   try {
     const session = await me()
     patchState({ user: session.user })
     await setMeta('user', session.user)
-    await refreshProgramHash()
+    await refreshConfig()
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) {
       navigate({ name: 'login' }, false)
@@ -122,15 +138,51 @@ async function requestPersistentStorage(): Promise<void> {
   }
 }
 
+/**
+ * The two values that come from configuration rather than from the sync delta: which program
+ * is current, and the technique reference.
+ *
+ * They refresh together whenever the app has reason to believe it can reach the server.
+ * Guides matter most here: unlike program snapshots they have no second delivery path over
+ * /api/sync, so a launch that happened offline has to pick them up when the signal returns
+ * rather than wait for the next cold start that happens to have one.
+ */
+async function refreshConfig(): Promise<void> {
+  await Promise.all([refreshProgramHash(), refreshGuides()])
+}
+
 /** The current program comes separately: the sync delta carries no marker of which one is active. */
 async function refreshProgramHash(): Promise<void> {
   try {
-    const response = await fetch(programUrl(), { credentials: 'same-origin' })
-    if (!response.ok) return
-    const body = (await response.json()) as { hash: string }
+    const body = await getProgramHash()
     await setCurrentProgramHash(body.hash)
-  } catch {
-    // Offline: the hash saved last time is what remains.
+  } catch (err) {
+    // Offline, or no program set yet: the hash saved last time is what remains.
+    if (!(err instanceof OfflineError) && !(err instanceof ApiError && err.status === 404)) {
+      console.error('не удалось узнать текущую программу', err)
+    }
+  }
+}
+
+/**
+ * The technique reference.
+ *
+ * A conditional request: the set is immutable until an admin reloads it, so the usual answer
+ * is 304 and costs nothing. The copy in IndexedDB is what the guide renders from, which is
+ * why an unreachable server here is silence rather than an error — offline is the normal
+ * state at the gym, and the reference has to open there.
+ */
+async function refreshGuides(): Promise<void> {
+  try {
+    const etag = (await getMeta<string>('guides_etag')) ?? ''
+    const body = await getGuides(etag)
+    if (!body) return // 304 — what is already on the device is current.
+    await setGuides(body.guides.exercises ?? {}, `"${body.hash}"`)
+  } catch (err) {
+    // Offline is the normal state at the gym and the reference still opens from IndexedDB,
+    // so that stays silent. Anything else belongs in the console: a reference that never
+    // arrives is otherwise indistinguishable from one that was never written.
+    if (!(err instanceof OfflineError)) console.error('не удалось обновить справочник', err)
   }
 }
 
@@ -138,7 +190,12 @@ async function afterLogin(): Promise<void> {
   const session = await me()
   patchState({ user: session.user })
   await setMeta('user', session.user)
+  // Both start now; only the one the next screen needs is awaited. The guides are ~24 KB
+  // that neither the home nor the workout screen reads, and awaiting them held the user on
+  // the login form for the length of a cold fetch on gym signal. refreshGuides never rejects.
+  const guides = refreshGuides()
   await refreshProgramHash()
+  void guides
   engine.retryNow()
 
   // If a workout was left unfinished, go straight back into it.

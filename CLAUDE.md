@@ -147,6 +147,58 @@ new id; never reuse a freed one. Likewise, a set's `idx` is assigned once and ne
 deletion is `deleted = 1`, not a shift of its neighbours — because the composite key
 `(session_id, exercise_id, idx)` is what makes LWW correct.
 
+## Exercise guides
+
+The technique reference lives in [guides/exercises.json](guides/exercises.json) — one file
+for everyone, keyed by `exercise_id`, loaded by [internal/guide](internal/guide/guide.go) and
+served at `GET /api/guides` with the hash of its canonical form as the ETag. `GYM_GUIDES`
+points at it; `POST /api/admin/guides/reload` swaps it in without a restart. It never touches
+the database.
+
+It is **not** a field of the program on purpose. A program is canonicalised and hashed, every
+session stores the `program_hash` it was recorded against, and history renders from that
+snapshot — so prose inside the program would mint a new snapshot on every comma. Keying on
+`exercise_id`, which is forever, is also what makes one guide correct for a workout recorded
+against a program that has since been replaced. A missing guide and a guide for an exercise
+no longer in the program are both normal; a malformed file stops startup, as a program does.
+
+A **missing** file is where the two loaders deliberately differ. `guide.Load` treats it as
+"this deployment ships no guides" and serves the empty set, which is right at startup.
+`guide.Reload`, behind the admin endpoint, refuses — because a file that has gone missing is
+almost always a rename or a typo in `GYM_GUIDES`, and reloading it as empty would hand every
+client a new hash whose body is `{}`, wiping the reference off devices that are offline in a
+basement. Use `Reload` for anything that runs after startup.
+
+Both loaders go through [internal/confload](internal/confload/confload.go), which holds the
+parts programs and guides genuinely share: the `^[a-z0-9_]{1,40}$` id alphabet (a guide key
+*is* an exercise id, so the two files must never disagree about it), a strict decode that
+rejects unknown fields **and** anything after the top-level object, and canonicalise-and-hash.
+The trailing-content check is not pedantry: without it a merge conflict or a double paste
+parses clean and boots a silently truncated file, which is the one outcome both formats exist
+to prevent.
+
+The video is the single exception to "no third-party anything" in CONTEXT.md §9, and it is
+narrow by construction:
+
+- the file supplies an eleven-character `youtube_id`, **never a URL**, validated in
+  [guide.go](internal/guide/guide.go) and again in
+  [youtube.ts](web/src/ui/youtube.ts) — the value ends up in the `src` of an iframe. Like the
+  merge rules, that is one rule written twice, so both sides are proved against one shared
+  table, [testdata/youtube_ids.json](testdata/youtube_ids.json); edit the table when you edit
+  either regexp, or the other language fails;
+- `frame-src https://www.youtube-nocookie.com` is the whole CSP change
+  ([middleware.go](internal/api/middleware.go)). No `script-src`, no `img-src`, no
+  `connect-src`: there is no YouTube JS API and no thumbnail pulled from ytimg;
+- the iframe is created only on an explicit tap on play
+  ([ExerciseGuide.tsx](web/src/ui/ExerciseGuide.tsx)) — the collapsed and the expanded guide
+  are both entirely first-party. [web/e2e/guide.spec.ts](web/e2e/guide.spec.ts) asserts that
+  no request to any Google host happens before that tap; keep that test if the player is
+  reworked.
+
+On the client the set lives in the `meta` store under `guides`/`guides_etag` rather than in a
+store of its own, so there is no IndexedDB migration, and it is read before any network call
+— the reference has to open in a basement gym.
+
 ## Server details worth knowing
 
 - Two connection pools on one file ([db.go](internal/db/db.go)): the writer is capped at **one**
