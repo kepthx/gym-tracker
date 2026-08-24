@@ -14,11 +14,7 @@
           "sets": 4,
           "default_reps": "5",
           "weighted": true,
-          "groups": [
-            "chest",
-            "triceps",
-            "delts_front"
-          ],
+          "groups": ["chest", "triceps", "front_delts"],
           "rest_sec": 180
         },
         {
@@ -28,12 +24,8 @@
           "sets": 3,
           "default_reps": "10",
           "weighted": true,
-          "groups": [
-            "chest",
-            "delts_front",
-            "triceps"
-          ],
-          "rest_sec": 120
+          "groups": ["chest", "front_delts", "triceps"],
+          "rest_sec": 150
         },
         {
           "id": "dips",
@@ -42,10 +34,7 @@
           "sets": 3,
           "default_reps": "10",
           "weighted": true,
-          "groups": [
-            "chest",
-            "triceps"
-          ],
+          "groups": ["chest", "triceps"],
           "rest_sec": 120
         },
         {
@@ -55,10 +44,8 @@
           "sets": 3,
           "default_reps": "12",
           "weighted": true,
-          "groups": [
-            "chest"
-          ],
-          "rest_sec": 60
+          "groups": ["chest"],
+          "rest_sec": 90
         },
         {
           "id": "triceps_ext_bb",
@@ -67,9 +54,7 @@
           "sets": 3,
           "default_reps": "12",
           "weighted": true,
-          "groups": [
-            "triceps"
-          ],
+          "groups": ["triceps"],
           "rest_sec": 90
         },
         {
@@ -79,9 +64,7 @@
           "sets": 3,
           "default_reps": "40с",
           "weighted": false,
-          "groups": [
-            "core"
-          ],
+          "groups": ["core"],
           "rest_sec": 60
         }
       ]
@@ -98,11 +81,7 @@
           "sets": 4,
           "default_reps": "8",
           "weighted": true,
-          "groups": [
-            "back",
-            "biceps",
-            "delts_rear"
-          ],
+          "groups": ["back", "lats", "biceps"],
           "rest_sec": 180
         },
         {
@@ -112,10 +91,7 @@
           "sets": 4,
           "default_reps": "8",
           "weighted": false,
-          "groups": [
-            "back",
-            "biceps"
-          ],
+          "groups": ["lats", "biceps"],
           "rest_sec": 150
         },
         {
@@ -125,10 +101,7 @@
           "sets": 3,
           "default_reps": "12",
           "weighted": true,
-          "groups": [
-            "back",
-            "biceps"
-          ],
+          "groups": ["lats", "biceps"],
           "rest_sec": 120
         },
         {
@@ -138,11 +111,8 @@
           "sets": 3,
           "default_reps": "12",
           "weighted": true,
-          "groups": [
-            "back",
-            "biceps"
-          ],
-          "rest_sec": 90
+          "groups": ["back", "lats"],
+          "rest_sec": 120
         },
         {
           "id": "curl_bb",
@@ -151,9 +121,7 @@
           "sets": 3,
           "default_reps": "10",
           "weighted": true,
-          "groups": [
-            "biceps"
-          ],
+          "groups": ["biceps"],
           "rest_sec": 90
         },
         {
@@ -163,11 +131,8 @@
           "sets": 3,
           "default_reps": "12",
           "weighted": true,
-          "groups": [
-            "biceps",
-            "forearms"
-          ],
-          "rest_sec": 60
+          "groups": ["biceps", "forearms"],
+          "rest_sec": 90
         }
       ]
     },
@@ -183,11 +148,8 @@
           "sets": 4,
           "default_reps": "5",
           "weighted": true,
-          "groups": [
-            "quads",
-            "glutes"
-          ],
-          "rest_sec": 180
+          "groups": ["quads", "glutes"],
+          "rest_sec": 210
         },
         {
           "id": "rdl",
@@ -196,12 +158,8 @@
           "sets": 3,
           "default_reps": "8",
           "weighted": true,
-          "groups": [
-            "hamstrings",
-            "glutes",
-            "back"
-          ],
-          "rest_sec": 150
+          "groups": ["hamstrings", "glutes", "back"],
+          "rest_sec": 180
         },
         {
           "id": "leg_press",
@@ -210,11 +168,8 @@
           "sets": 3,
           "default_reps": "12",
           "weighted": true,
-          "groups": [
-            "quads",
-            "glutes"
-          ],
-          "rest_sec": 120
+          "groups": ["quads", "glutes"],
+          "rest_sec": 150
         },
         {
           "id": "lunge_db",
@@ -223,10 +178,7 @@
           "sets": 3,
           "default_reps": "10/нога",
           "weighted": true,
-          "groups": [
-            "quads",
-            "glutes"
-          ],
+          "groups": ["quads", "glutes"],
           "rest_sec": 120
         },
         {
@@ -236,9 +188,7 @@
           "sets": 3,
           "default_reps": "12",
           "weighted": true,
-          "groups": [
-            "hamstrings"
-          ],
+          "groups": ["hamstrings"],
           "rest_sec": 90
         },
         {
@@ -248,9 +198,7 @@
           "sets": 4,
           "default_reps": "15",
           "weighted": true,
-          "groups": [
-            "calves"
-          ],
+          "groups": ["calves"],
           "rest_sec": 60
         }
       ]
@@ -267,10 +215,7 @@
           "sets": 4,
           "default_reps": "6",
           "weighted": true,
-          "groups": [
-            "delts_front",
-            "triceps"
-          ],
+          "groups": ["front_delts", "side_delts", "triceps"],
           "rest_sec": 180
         },
         {
@@ -280,10 +225,8 @@
           "sets": 4,
           "default_reps": "12",
           "weighted": true,
-          "groups": [
-            "delts_side"
-          ],
-          "rest_sec": 60
+          "groups": ["side_delts"],
+          "rest_sec": 75
         },
         {
           "id": "rear_delt_fly",
@@ -292,10 +235,8 @@
           "sets": 3,
           "default_reps": "15",
           "weighted": true,
-          "groups": [
-            "delts_rear"
-          ],
-          "rest_sec": 60
+          "groups": ["rear_delts"],
+          "rest_sec": 75
         },
         {
           "id": "shrug_db",
@@ -304,10 +245,8 @@
           "sets": 3,
           "default_reps": "12",
           "weighted": true,
-          "groups": [
-            "traps"
-          ],
-          "rest_sec": 60
+          "groups": ["traps"],
+          "rest_sec": 90
         },
         {
           "id": "triceps_pushdown",
@@ -316,10 +255,8 @@
           "sets": 3,
           "default_reps": "12",
           "weighted": true,
-          "groups": [
-            "triceps"
-          ],
-          "rest_sec": 60
+          "groups": ["triceps"],
+          "rest_sec": 75
         },
         {
           "id": "curl_preacher",
@@ -328,10 +265,8 @@
           "sets": 3,
           "default_reps": "12",
           "weighted": true,
-          "groups": [
-            "biceps"
-          ],
-          "rest_sec": 60
+          "groups": ["biceps"],
+          "rest_sec": 75
         },
         {
           "id": "crunch_cable",
@@ -340,9 +275,7 @@
           "sets": 3,
           "default_reps": "15",
           "weighted": true,
-          "groups": [
-            "core"
-          ],
+          "groups": ["core"],
           "rest_sec": 60
         }
       ]
