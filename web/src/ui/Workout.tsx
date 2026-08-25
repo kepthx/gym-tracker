@@ -6,14 +6,23 @@ import {
   doneCount,
   isBetter,
   lastResult,
+  lastSetAt,
   setAt,
   setsOf,
   totalSets,
 } from '../state/selectors'
+import type { LastResult } from '../state/selectors'
 import type { Exercise, SetRow } from '../types'
 import { ConfirmInline } from './ConfirmInline'
 import { ExerciseGuide } from './ExerciseGuide'
-import { fmtDate, fmtSets, fmtWeight, isWeightInputValid, parseWeight } from './format'
+import {
+  fmtDate,
+  fmtSets,
+  fmtWeight,
+  isNumericReps,
+  isWeightInputValid,
+  parseWeight,
+} from './format'
 import { SaveStatusBar, SaveStatusChip } from './SaveStatus'
 import './workout.css'
 
@@ -169,6 +178,7 @@ function ExerciseCard({
             key={idx}
             idx={idx}
             exercise={exercise}
+            previous={previous}
             sessionID={sessionID}
             row={setAt(mine, exercise.id, idx)}
             editing={editing === idx}
@@ -198,6 +208,7 @@ function ExerciseCard({
 function SetColumn({
   idx,
   exercise,
+  previous,
   sessionID,
   row,
   editing,
@@ -205,12 +216,16 @@ function SetColumn({
 }: {
   idx: number
   exercise: Exercise
+  previous: LastResult | null
   sessionID: string
   row: SetRow | undefined
   editing: boolean
   onEdit: (idx: number | null) => void
 }) {
   const done = row?.done ?? false
+  // What this very set held last time. It is a hint, never a value: a weight nobody lifted
+  // must not end up recorded because a field was pre-filled and then left alone.
+  const last = lastSetAt(previous, idx)
 
   /**
    * Tapping the button IMMEDIATELY writes the mark with the default reps and highlights
@@ -244,6 +259,7 @@ function SetColumn({
       {editing && done ? (
         <RepsEditor
           label={`Повторения, подход ${idx + 1}`}
+          numeric={isNumericReps(exercise.default_reps)}
           placeholder={row?.reps ?? exercise.default_reps}
           onDone={(reps) => {
             onEdit(null)
@@ -273,6 +289,7 @@ function SetColumn({
       {exercise.weighted && (
         <WeightField
           value={row?.weight ?? null}
+          placeholder={last?.weight != null ? fmtWeight(last.weight) : 'кг'}
           onCommit={(weight) => {
             void upsertSet(sessionID, exercise.id, idx, {
               done: row?.done ?? false,
@@ -288,9 +305,11 @@ function SetColumn({
 
 function WeightField({
   value,
+  placeholder,
   onCommit,
 }: {
   value: number | null
+  placeholder: string
   onCommit: (weight: number | null) => void
 }) {
   const [text, setText] = useState(fmtWeight(value))
@@ -321,7 +340,9 @@ function WeightField({
       autocapitalize="off"
       spellcheck={false}
       class="weight-field"
-      placeholder="кг"
+      /* Last time's weight for this very set, greyed out — the number today's decision is
+         made from, in the place the decision is typed. «кг» when there is no last time. */
+      placeholder={placeholder}
       value={text}
       onInput={(e) => {
         const next = (e.currentTarget as HTMLInputElement).value
@@ -348,10 +369,12 @@ function WeightField({
  */
 function RepsEditor({
   label,
+  numeric,
   placeholder,
   onDone,
 }: {
   label: string
+  numeric: boolean
   placeholder: string
   onDone: (reps: string) => void
 }) {
@@ -365,9 +388,13 @@ function RepsEditor({
   return (
     <input
       ref={ref}
-      /* Reps are text: they can be «12», «8/нога», «30с», «40м». */
+      /* The field stays type="text" whatever the keyboard: reps can be «8/нога», «30с»,
+         «40м», and type="number" would return an empty value for every one of them — the
+         same trap as the comma in the weight field below.
+         The keyboard, though, is chosen per exercise: digits only where the exercise counts
+         in plain repetitions, which is most of them. */
       type="text"
-      inputMode="text"
+      inputMode={numeric ? 'numeric' : 'text'}
       enterKeyHint="done"
       autocomplete="off"
       class="reps-field"

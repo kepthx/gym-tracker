@@ -95,6 +95,19 @@ test('тренировка переживает офлайн и перезапу
     await expect(page.getByRole('button', { name: /1\. Ноги/ })).toBeVisible()
     await expect(page.getByText('Незавершённая тренировка')).toHaveCount(0)
   })
+
+  // The number today's weight is decided from, in the place it is typed. A hint, never a
+  // value: it must not be recorded by itself, or the log would fill with weights nobody
+  // lifted.
+  await test.step('в следующий раз прошлый вес стоит подсказкой в поле', async () => {
+    await page.getByRole('button', { name: /1\. Ноги/ }).click()
+    const weight = page.getByPlaceholder('82,5')
+    await expect(weight).toBeVisible()
+    await expect(weight).toHaveValue('')
+
+    // Sets that had no weight last time keep the plain unit hint.
+    await expect(page.getByPlaceholder('кг').first()).toBeVisible()
+  })
 })
 
 test('выход из тренировки требует подтверждения и не теряет данные', async ({ page }) => {

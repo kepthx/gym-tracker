@@ -7,6 +7,7 @@ import {
   history,
   lastDoneAt,
   lastResult,
+  lastSetAt,
   progressSeries,
   totalSets,
 } from './selectors'
@@ -103,8 +104,8 @@ describe('прошлый результат', () => {
     const result = lastResult(sessions, sets, 'bench_bb', 'текущая')
     expect(result?.at).toBe(1 * DAY)
     expect(result?.sets).toEqual([
-      { weight: 80, reps: '5' },
-      { weight: 82.5, reps: '4' },
+      { idx: 0, weight: 80, reps: '5' },
+      { idx: 1, weight: 82.5, reps: '4' },
     ])
   })
 
@@ -128,6 +129,33 @@ describe('прошлый результат', () => {
     ]
     const sets = [set('удалённая', 'bench_bb', 0, { weight: 80 })]
     expect(lastResult(sessions, sets, 'bench_bb', 'текущая')).toBeNull()
+  })
+
+  /**
+   * The hint in the weight field. It has to name the same set number, not the same position:
+   * a set skipped last time shifts every later position by one, and a hint that quietly
+   * points at a different set is worse than no hint at all.
+   */
+  it('подсказка по подходу берётся по его номеру, а не по месту в списке', () => {
+    const sessions = [
+      session('прошлая', { started_at: 1 * DAY }),
+      session('текущая', { started_at: 2 * DAY, finished_at: null }),
+    ]
+    const sets = [
+      set('прошлая', 'bench_bb', 0, { weight: 80, reps: '5' }),
+      // The second set was skipped: nothing was recorded for idx 1 at all.
+      set('прошлая', 'bench_bb', 2, { weight: 85, reps: '3' }),
+    ]
+
+    const previous = lastResult(sessions, sets, 'bench_bb', 'текущая')
+    expect(lastSetAt(previous, 0)?.weight).toBe(80)
+    expect(lastSetAt(previous, 1)).toBeNull()
+    expect(lastSetAt(previous, 2)?.weight).toBe(85)
+    expect(lastSetAt(previous, 3)).toBeNull()
+  })
+
+  it('без прошлой тренировки подсказки нет', () => {
+    expect(lastSetAt(null, 0)).toBeNull()
   })
 
   it('неотмеченные подходы в прошлый результат не входят', () => {

@@ -70,6 +70,17 @@ export function isWeightInputValid(raw: string): boolean {
   return /^\d{0,4}([.,]\d{0,2})?$/.test(raw.trim())
 }
 
+/**
+ * Whether an exercise's reps are a plain count, and so can have a digits-only keyboard.
+ *
+ * Not every exercise's are: a plank is «30с», a carry «40м», a lunge «10/нога». Those need
+ * letters and a slash, and a numeric keypad would make them impossible to type. The program's
+ * default is what decides, because it is what the field is pre-filled with.
+ */
+export function isNumericReps(reps: string): boolean {
+  return /^\d+$/.test(reps.trim())
+}
+
 /** The last-result line: «80×8 · 80×8 · 82,5×6». */
 export function fmtSets(sets: { weight: number | null; reps: string | null }[]): string {
   return sets

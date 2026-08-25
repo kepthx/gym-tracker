@@ -49,7 +49,8 @@ export function totalSets(program: Program | null, dayID: string): number {
 
 export interface LastResult {
   at: number
-  sets: { weight: number | null; reps: string | null }[]
+  /** Carries idx: a skipped set means position in this array is not the set number. */
+  sets: { idx: number; weight: number | null; reps: string | null }[]
 }
 
 /**
@@ -71,10 +72,23 @@ export function lastResult(
       .filter((s) => s.session_id === session.id && s.exercise_id === exerciseID && s.done && !s.deleted)
       .sort((a, b) => a.idx - b.idx)
     if (done.length > 0) {
-      return { at: session.started_at, sets: done.map((s) => ({ weight: s.weight, reps: s.reps })) }
+      return {
+        at: session.started_at,
+        sets: done.map((s) => ({ idx: s.idx, weight: s.weight, reps: s.reps })),
+      }
     }
   }
   return null
+}
+
+/**
+ * Last time's numbers for one particular set.
+ *
+ * Matched on idx rather than on position: a set skipped last time would otherwise shift every
+ * later set's hint by one, and a hint that quietly names the wrong set is worse than none.
+ */
+export function lastSetAt(previous: LastResult | null, idx: number): LastResult['sets'][number] | null {
+  return previous?.sets.find((s) => s.idx === idx) ?? null
 }
 
 /**
