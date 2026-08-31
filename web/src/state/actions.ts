@@ -1,4 +1,4 @@
-import { applyLocal, getMeta, setMeta } from '../db/idb'
+import { applyLocal, getMeta, getSet, setMeta } from '../db/idb'
 import { engine } from '../sync/engine'
 import type { Op, SessionRow, SetRow } from '../types'
 import { getState, reloadFromStorage } from './store'
@@ -88,6 +88,29 @@ interface SetPatch {
   done: boolean
   weight: number | null
   reps: string | null
+}
+
+/**
+ * Writes the weight, keeping whatever else the set already holds.
+ *
+ * The rest of the row is re-read from storage rather than taken from the screen. Marking a
+ * set and typing its weight are now one gesture apart — the tap hands the keyboard straight
+ * to this field — so the two writes follow each other faster than a render. Since every
+ * `set.upsert` carries the whole row, a `done` captured before the mark had landed would
+ * travel with the weight and unmark the set the tap has just counted.
+ */
+export async function setWeight(
+  sessionID: string,
+  exerciseID: string,
+  idx: number,
+  weight: number | null,
+): Promise<void> {
+  const current = await getSet(sessionID, exerciseID, idx)
+  await upsertSet(sessionID, exerciseID, idx, {
+    done: current?.done ?? false,
+    weight,
+    reps: current?.reps ?? null,
+  })
 }
 
 /**

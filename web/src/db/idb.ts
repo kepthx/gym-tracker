@@ -169,6 +169,23 @@ export async function allSets(): Promise<SetRow[]> {
   return wrap<SetRow[]>(tx.objectStore(STORE.sets).getAll())
 }
 
+/**
+ * One set, straight from storage.
+ *
+ * Needed where a write has to build on the freshest row rather than on what the screen was
+ * holding when it rendered: `set.upsert` carries the whole row, so a field written from a
+ * stale copy takes the rest of that copy with it.
+ */
+export async function getSet(
+  sessionID: string,
+  exerciseID: string,
+  idx: number,
+): Promise<SetRow | undefined> {
+  const db = await openDB()
+  const tx = db.transaction(STORE.sets, 'readonly')
+  return wrap<SetRow | undefined>(tx.objectStore(STORE.sets).get([sessionID, exerciseID, idx]))
+}
+
 export async function allPrograms(): Promise<{ hash: string; json: Program }[]> {
   const db = await openDB()
   const tx = db.transaction(STORE.programs, 'readonly')

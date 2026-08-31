@@ -111,18 +111,30 @@ Under each button (only for weighted exercises), a compact weight field in kg. T
 has to open numeric, and comma and period have to work identically. Half a kilo is an ordinary
 step on a dumbbell rack — 28.5 kg is a normal entry, not an edge case.
 
-After a set is marked, the reps editor for that set opens immediately: the program's value is
-pre-filled, and the user can change it (did 6 instead of 8) and confirm. The default has to be
-right in most cases, so that editing is the exception rather than a mandatory step. The field
-takes digits and nothing else: where an exercise is measured in something other than
-repetitions — "30s", "40m", "10/leg" — the unit is a property of the exercise, the same in
-every set of every workout, so it is printed beside the field and added back on save rather
-than typed.
+Marking a set records the program's reps along with it, and the keyboard then goes to that
+set's weight field. The weight is the one number the tap cannot know; the reps it can, and
+they are right almost every time. What is typed in the second after a tap therefore has to
+land in the weight — an editor for anything else opening over the square the finger has just
+hit will collect the weight instead, silently, for as long as it takes someone to look in the
+database.
 
-Every input on this screen therefore asks for one and the same numeric keypad. A screen that
-mixes a digits-only pad with a decimal one is a screen where the pad presented for one field
-can be left standing over the next, and a weight field under a digits-only pad cannot take
-28.5.
+The exception is an exercise with no weight at all. There the reps are the whole record, so
+the tap opens their editor, as before.
+
+Correcting the reps — six instead of eight — is a deliberate act: holding the marked square
+opens an editor in its place, pre-filled with nothing and showing the program's value as a
+hint, so the ordinary case costs no typing and no clearing. The field takes digits and
+nothing else: where an exercise is measured in something other than repetitions — "30s",
+"40m", "10/leg" — the unit is a property of the exercise, the same in every set of every
+workout, so it is printed beside the field and added back on save rather than typed.
+
+Every input on this screen asks for one and the same numeric keypad, so that moving between
+them never depends on the keyboard being re-presented.
+
+Both writes — the mark and the weight — carry the whole row, and they now follow each other
+within a single gesture. So the second one must be built from what storage holds at that
+moment, never from what the screen was rendered with, or the weight arrives carrying a
+"not done" from before the mark landed and quietly undoes it.
 
 Tapping a marked set again unmarks it.
 

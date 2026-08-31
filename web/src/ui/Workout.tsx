@@ -1,5 +1,6 @@
+import type { RefObject } from 'preact'
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { finishWorkout, upsertSet } from '../state/actions'
+import { finishWorkout, setWeight, upsertSet } from '../state/actions'
 import { getState, navigate, programFor } from '../state/store'
 import {
   bestWeight,
@@ -228,12 +229,18 @@ function SetColumn({
   // What this very set held last time. It is a hint, never a value: a weight nobody lifted
   // must not end up recorded because a field was pre-filled and then left alone.
   const last = lastSetAt(previous, idx)
+  const weightRef = useRef<HTMLInputElement>(null)
+  const pressedAt = useRef(0)
 
   /**
-   * Tapping the button IMMEDIATELY writes the mark with the default reps and highlights
-   * the button at once. The reps editor opens only after that. So the data is saved from
-   * the moment of the tap, not from the moment of confirmation: the default is right in
-   * most cases, and editing stays an exception rather than a mandatory step.
+   * Tapping the button IMMEDIATELY writes the mark with the default reps and highlights the
+   * button at once, then hands the keyboard to the weight field below it. So the data is
+   * saved from the moment of the tap, and the field that opens is the one holding the only
+   * number the tap cannot guess.
+   *
+   * The reps are not that number: they come from the program and are right almost every
+   * time. An editor for them opening over the square the finger has just hit is what
+   * swallowed a week of weights — everything typed straight after a tap went into it.
    */
   function toggle() {
     if (done) {
@@ -250,7 +257,30 @@ function SetColumn({
       weight: row?.weight ?? null,
       reps: exercise.default_reps,
     })
-    onEdit(idx)
+    // Focused synchronously inside the tap: iOS raises the keyboard only for a focus that
+    // happens within the gesture itself, so this must not wait on the write above.
+    // An unweighted exercise has no weight field, and there the reps are the whole record —
+    // that is the one case where the editor is still what the tap opens.
+    if (exercise.weighted) weightRef.current?.focus()
+    else onEdit(idx)
+  }
+
+  /**
+   * Holding a marked set opens the reps editor: the rare correction — six instead of eight —
+   * asked for deliberately rather than offered after every tap. A hold on an unmarked set is
+   * just a slow tap, because the editor only ever belongs on a set that is already counted.
+   */
+  const HOLD_MS = 450
+
+  function press() {
+    const started = pressedAt.current
+    pressedAt.current = 0
+    // started === 0 means the activation came from a keyboard, not a finger: no hold to read.
+    if (started !== 0 && Date.now() - started >= HOLD_MS && done) {
+      onEdit(idx)
+      return
+    }
+    toggle()
   }
 
   return (
@@ -283,7 +313,10 @@ function SetColumn({
       ) : (
         <button
           class={`set-btn ${done ? 'set-btn-done' : ''}`}
-          onClick={toggle}
+          onPointerDown={() => {
+            pressedAt.current = Date.now()
+          }}
+          onClick={press}
           aria-label={`Подход ${idx + 1}`}
         >
           {done ? (row?.reps ?? exercise.default_reps) : '—'}
@@ -292,14 +325,14 @@ function SetColumn({
 
       {exercise.weighted && (
         <WeightField
+          inputRef={weightRef}
           value={row?.weight ?? null}
           placeholder={last?.weight != null ? fmtWeight(last.weight) : 'кг'}
+          /* Not upsertSet with the row this render is holding: the mark written by the tap
+             that opened this field may not have landed yet, and setWeight rebuilds the row
+             from storage instead of carrying a stale `done` back over it. */
           onCommit={(weight) => {
-            void upsertSet(sessionID, exercise.id, idx, {
-              done: row?.done ?? false,
-              weight,
-              reps: row?.reps ?? null,
-            })
+            void setWeight(sessionID, exercise.id, idx, weight)
           }}
         />
       )}
@@ -308,10 +341,12 @@ function SetColumn({
 }
 
 function WeightField({
+  inputRef,
   value,
   placeholder,
   onCommit,
 }: {
+  inputRef: RefObject<HTMLInputElement>
   value: number | null
   placeholder: string
   onCommit: (weight: number | null) => void
@@ -333,6 +368,7 @@ function WeightField({
 
   return (
     <input
+      ref={inputRef}
       /* Never type="number": on a Russian layout the numeric keyboard produces a comma,
          type="number" discards it, and the field silently goes empty. inputmode="decimal"
          gives the same keyboard, and parseWeight handles the comma. */
