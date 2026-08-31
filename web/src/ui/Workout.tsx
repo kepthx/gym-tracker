@@ -19,9 +19,11 @@ import {
   fmtDate,
   fmtSets,
   fmtWeight,
-  isNumericReps,
   isWeightInputValid,
+  joinReps,
   parseWeight,
+  repsCount,
+  repsUnit,
 } from './format'
 import { SaveStatusBar, SaveStatusChip } from './SaveStatus'
 import './workout.css'
@@ -259,8 +261,10 @@ function SetColumn({
       {editing && done ? (
         <RepsEditor
           label={`Повторения, подход ${idx + 1}`}
-          numeric={isNumericReps(exercise.default_reps)}
-          placeholder={row?.reps ?? exercise.default_reps}
+          /* The unit comes from the program, not from the saved row: it says what this
+             exercise is measured in, and that is true of a set nobody has done yet. */
+          unit={repsUnit(exercise.default_reps)}
+          placeholder={repsCount(row?.reps ?? exercise.default_reps)}
           onDone={(reps) => {
             onEdit(null)
             // An empty field means "leave what the tap wrote": the default is already
@@ -366,15 +370,19 @@ function WeightField({
  * tap, so the common case — it was right — needs no typing, and the rare case needs no
  * clearing first. Pre-filled text would have to be deleted every time it is wrong, which is
  * the one moment when hands are chalked and patience is short.
+ *
+ * The field takes digits only. Where the exercise is measured in something else — «30с»,
+ * «40м», «10/нога» — the unit is printed under the number and appended on save, so the
+ * stored value keeps the shape it has always had while the keyboard stays a keypad.
  */
 function RepsEditor({
   label,
-  numeric,
+  unit,
   placeholder,
   onDone,
 }: {
   label: string
-  numeric: boolean
+  unit: string
   placeholder: string
   onDone: (reps: string) => void
 }) {
@@ -386,26 +394,47 @@ function RepsEditor({
   }, [])
 
   return (
-    <input
-      ref={ref}
-      /* The field stays type="text" whatever the keyboard: reps can be «8/нога», «30с»,
-         «40м», and type="number" would return an empty value for every one of them — the
-         same trap as the comma in the weight field below.
-         The keyboard, though, is chosen per exercise: digits only where the exercise counts
-         in plain repetitions, which is most of them. */
-      type="text"
-      inputMode={numeric ? 'numeric' : 'text'}
-      enterKeyHint="done"
-      autocomplete="off"
-      class="reps-field"
-      aria-label={label}
-      placeholder={placeholder}
-      value={text}
-      onInput={(e) => setText((e.currentTarget as HTMLInputElement).value)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') onDone(text.trim())
-      }}
-      onBlur={() => onDone(text.trim())}
-    />
+    <div class="reps-box">
+      <input
+        ref={ref}
+        /* Still type="text": type="number" hands back an empty string for anything it does
+           not like, which is how a field silently loses what was typed — the same trap as
+           the comma in the weight field above. The digits-only rule lives in onInput.
+           inputmode is "decimal" rather than "numeric" even though reps are whole numbers,
+           so that every field on this screen asks for the same keyboard. iOS presents the
+           keypad for the field taking focus, and moving straight from here to the weight
+           field — tapping it while this editor is still open — does not reliably re-present
+           it; a digits-only pad left standing over the weight field is a field that cannot
+           take 28,5. */
+        type="text"
+        inputMode="decimal"
+        enterKeyHint="done"
+        autocomplete="off"
+        class="reps-field"
+        aria-label={label}
+        placeholder={placeholder}
+        value={text}
+        onInput={(e) => {
+          const el = e.currentTarget as HTMLInputElement
+          const digits = el.value.replace(/\D/g, '').slice(0, 4)
+          // Written back to the element directly, not just to state: when the cleaned value
+          // equals what state already holds there is no re-render to undo the character the
+          // field is showing.
+          if (digits !== el.value) el.value = digits
+          setText(digits)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') onDone(joinReps(text, unit))
+        }}
+        onBlur={() => onDone(joinReps(text, unit))}
+      />
+      {/* Not read out: the field's own label already says what is being entered, and the
+          unit repeated after every number turns the screen reader into a metronome. */}
+      {unit !== '' && (
+        <span class="reps-unit" aria-hidden="true">
+          {unit}
+        </span>
+      )}
+    </div>
   )
 }

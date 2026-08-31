@@ -71,14 +71,25 @@ export function isWeightInputValid(raw: string): boolean {
 }
 
 /**
- * Whether an exercise's reps are a plain count, and so can have a digits-only keyboard.
+ * A reps value is a count and, for some exercises, a unit: «30с», «40м», «10/нога».
  *
- * Not every exercise's are: a plank is «30с», a carry «40м», a lunge «10/нога». Those need
- * letters and a slash, and a numeric keypad would make them impossible to type. The program's
- * default is what decides, because it is what the field is pre-filled with.
+ * The unit is a property of the exercise, not of what was done today — it is the same in
+ * every set of every workout. So it is shown beside the field instead of being typed into
+ * it, and the field itself takes digits and nothing else. Typing «м» on a numeric keypad is
+ * impossible anyway, which is the practical half of the reason.
  */
-export function isNumericReps(reps: string): boolean {
-  return /^\d+$/.test(reps.trim())
+export function repsCount(reps: string): string {
+  return /^\d*/.exec(reps.trim())![0]
+}
+
+/** The other half of the same split: «30с» → «с», «10/нога» → «/нога», «8» → «». */
+export function repsUnit(reps: string): string {
+  return reps.trim().replace(/^\d*/, '')
+}
+
+/** Puts the two back together for storage, keeping «30с» the shape it has always had. */
+export function joinReps(count: string, unit: string): string {
+  return count === '' ? '' : count + unit
 }
 
 /** The last-result line: «80×8 · 80×8 · 82,5×6». */

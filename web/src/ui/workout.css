@@ -108,18 +108,31 @@
 }
 
 /* Geometry copied from .set-btn, because it stands in that exact square: any difference in
-   size or radius would show up as a jump at the moment of the tap. */
-.reps-field {
+   size or radius would show up as a jump at the moment of the tap. The chrome is on the box
+   rather than on the input, so the unit can sit inside the same square. */
+.reps-box {
   width: var(--tap);
   height: var(--tap);
-  padding: 0 4px;
-  text-align: center;
   border-radius: 12px;
   /* Green fill because the set is already counted — the editor only ever opens on a set
      that the tap has just marked — and an accent border because it is being edited. Losing
      the green while typing would take back the one thing the tap had just confirmed. */
   border: 1px solid var(--accent);
   background: var(--done-fill);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.reps-field {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  padding: 0 4px;
+  text-align: center;
+  border: none;
+  background: none;
   color: var(--text);
   font-weight: 650;
   font-variant-numeric: tabular-nums;
@@ -127,6 +140,17 @@
 
 .reps-field:focus {
   outline: none;
+}
+
+/* The unit of the exercise — «с», «м», «/нога» — printed, never typed. Quiet and small: it
+   never changes, so it is there to say what the number means, not to be read every set. */
+.reps-unit {
+  padding-bottom: 5px;
+  text-align: center;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 .finish {

@@ -136,3 +136,46 @@ test('выход из тренировки требует подтвержден
   await expect(page.locator('.workout-counter')).toHaveText(/^1\//)
   await expect(page.locator('.set-btn-done')).toHaveCount(1)
 })
+
+/**
+ * The second half of the same idea as the weight field: what the user types is a number, and
+ * everything that is not a number is the exercise's own unit, printed rather than typed.
+ *
+ * The kilograms are checked in the same card on purpose. Both fields ask for the same keypad,
+ * and that is what makes «28,5» typable: iOS presents the keyboard for the field taking focus,
+ * and going straight from a digits-only pad into the weight field can leave the pad standing.
+ */
+test('расстояние вводится числом, единица подписана, вес рядом принимает половину кило', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByPlaceholder('Пароль').fill(PASSWORD)
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await page.getByRole('button', { name: /2\. Спина/ }).click()
+
+  const carry = page.locator('section.exercise').filter({ hasText: 'Прогулка с гирей' })
+  await carry.getByRole('button', { name: 'Подход 1' }).click()
+
+  const reps = carry.locator('.reps-field')
+  await expect(reps).toBeFocused()
+  await expect(carry.locator('.reps-unit')).toHaveText('м')
+  await expect(reps).toHaveAttribute('placeholder', '30')
+  await expect(reps).toHaveAttribute('inputmode', 'decimal')
+
+  // The separator key is on this keypad too. It must not reach a count.
+  await reps.pressSequentially('4,5')
+  await expect(reps).toHaveValue('45')
+  await page.keyboard.press('Enter')
+
+  // Stored the way history has always held it — the unit went back on.
+  await expect(carry.getByRole('button', { name: 'Подход 1' })).toHaveText('45м')
+
+  const weight = carry.getByPlaceholder('кг').first()
+  await weight.fill('28,5')
+  await weight.blur()
+  await expect(weight).toHaveValue('28,5')
+
+  await page.reload()
+  await expect(carry.getByRole('button', { name: 'Подход 1' })).toHaveText('45м')
+  await expect(carry.getByPlaceholder('кг').first()).toHaveValue('28,5')
+})

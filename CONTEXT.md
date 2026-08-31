@@ -108,11 +108,21 @@ without aiming. Unmarked: a neutral look with a dash. Marked: highlighted, showi
 of reps completed.
 
 Under each button (only for weighted exercises), a compact weight field in kg. The keyboard
-has to open numeric, and comma and period have to work identically.
+has to open numeric, and comma and period have to work identically. Half a kilo is an ordinary
+step on a dumbbell rack — 28.5 kg is a normal entry, not an edge case.
 
 After a set is marked, the reps editor for that set opens immediately: the program's value is
 pre-filled, and the user can change it (did 6 instead of 8) and confirm. The default has to be
-right in most cases, so that editing is the exception rather than a mandatory step.
+right in most cases, so that editing is the exception rather than a mandatory step. The field
+takes digits and nothing else: where an exercise is measured in something other than
+repetitions — "30s", "40m", "10/leg" — the unit is a property of the exercise, the same in
+every set of every workout, so it is printed beside the field and added back on save rather
+than typed.
+
+Every input on this screen therefore asks for one and the same numeric keypad. A screen that
+mixes a digits-only pad with a decimal one is a screen where the pad presented for one field
+can be left standing over the next, and a weight field under a digits-only pad cannot take
+28.5.
 
 Tapping a marked set again unmarks it.
 
