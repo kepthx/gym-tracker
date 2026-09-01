@@ -131,10 +131,16 @@ function ExerciseCard({
 }) {
   const state = getState()
   const [editing, setEditing] = useState<number | null>(null)
+  const [repsMode, setRepsMode] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
 
   const mine = sets.filter((s) => s.exercise_id === exercise.id)
   const done = doneCount(mine)
+  // The first marked set: the one the keyboard goes to when the whole row opens at once.
+  const firstDone = mine.reduce<number | null>(
+    (first, s) => (s.done && (first === null || s.idx < first) ? s.idx : first),
+    null,
+  )
 
   const previous = lastResult(state.sessions, state.sets, exercise.id, sessionID)
   // On an assisted machine the number is the help given, so the best result is the smallest.
@@ -184,24 +190,46 @@ function ExerciseCard({
             previous={previous}
             sessionID={sessionID}
             row={setAt(mine, exercise.id, idx)}
-            editing={editing === idx}
+            editing={repsMode || editing === idx}
+            /* Every editor mounts at once in reps mode, but only one may claim the
+               keyboard — otherwise the last column to render wins it. */
+            takeFocus={editing === idx || (repsMode && idx === firstDone)}
             onEdit={setEditing}
           />
         ))}
       </div>
 
-      {/* Both the control and what it opens live below the set row. The card's hierarchy is
-          name → scheme → last result → sets, and the reference is none of those: putting the
+      {/* Both controls and what they open live below the set row. The card's hierarchy is
+          name → scheme → last result → sets, and neither of these is one of those: putting a
           button up in the head would wedge it between the scheme and the last result, which
           is the line the user actually reads before choosing today's weight. Down here
           nothing moves under a finger already aiming at a square, either. */}
-      <button
-        class="guide-toggle"
-        aria-expanded={showGuide}
-        onClick={() => setShowGuide((open) => !open)}
-      >
-        {showGuide ? 'Скрыть технику' : 'Как выполнять'}
-      </button>
+      <div class="card-actions">
+        <button
+          class="guide-toggle"
+          aria-expanded={showGuide}
+          onClick={() => setShowGuide((open) => !open)}
+        >
+          {showGuide ? 'Скрыть технику' : 'Как выполнять'}
+        </button>
+
+        {/* The visible way into the reps, next to the hold that does the same for one set.
+            It appears only once something is marked: with nothing recorded there is nothing
+            to correct, and an untouched card stays as bare as it was.
+            The whole row opens together on purpose — «8, 8, 6» is one pass, not three. */}
+        {done > 0 && (
+          <button
+            class="guide-toggle"
+            aria-pressed={repsMode}
+            onClick={() => {
+              setEditing(null)
+              setRepsMode((open) => !open)
+            }}
+          >
+            {repsMode ? 'Готово' : 'Повторения'}
+          </button>
+        )}
+      </div>
 
       {showGuide && <ExerciseGuide exerciseID={exercise.id} />}
     </section>
@@ -215,6 +243,7 @@ function SetColumn({
   sessionID,
   row,
   editing,
+  takeFocus,
   onEdit,
 }: {
   idx: number
@@ -223,6 +252,7 @@ function SetColumn({
   sessionID: string
   row: SetRow | undefined
   editing: boolean
+  takeFocus: boolean
   onEdit: (idx: number | null) => void
 }) {
   const done = row?.done ?? false
@@ -291,6 +321,7 @@ function SetColumn({
       {editing && done ? (
         <RepsEditor
           label={`Повторения, подход ${idx + 1}`}
+          takeFocus={takeFocus}
           /* The unit comes from the program, not from the saved row: it says what this
              exercise is measured in, and that is true of a set nobody has done yet. */
           unit={repsUnit(exercise.default_reps)}
@@ -414,11 +445,13 @@ function WeightField({
 function RepsEditor({
   label,
   unit,
+  takeFocus,
   placeholder,
   onDone,
 }: {
   label: string
   unit: string
+  takeFocus: boolean
   placeholder: string
   onDone: (reps: string) => void
 }) {
@@ -426,7 +459,9 @@ function RepsEditor({
   const ref = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    ref.current?.focus()
+    // Once, on mount. Refocusing a field the user has since moved away from would drag the
+    // keyboard back under them mid-correction.
+    if (takeFocus) ref.current?.focus()
   }, [])
 
   return (
@@ -436,12 +471,10 @@ function RepsEditor({
         /* Still type="text": type="number" hands back an empty string for anything it does
            not like, which is how a field silently loses what was typed — the same trap as
            the comma in the weight field above. The digits-only rule lives in onInput.
-           inputmode is "decimal" rather than "numeric" even though reps are whole numbers,
-           so that every field on this screen asks for the same keyboard. iOS presents the
-           keypad for the field taking focus, and moving straight from here to the weight
-           field — tapping it while this editor is still open — does not reliably re-present
-           it; a digits-only pad left standing over the weight field is a field that cannot
-           take 28,5. */
+           inputmode is "decimal" rather than "numeric" even though reps are whole numbers:
+           one keypad for every field on the screen. The two differ by a separator key that
+           this field drops anyway, so asking for a second layout buys nothing and leaves
+           one more thing to go wrong between the fields. */
         type="text"
         inputMode="decimal"
         enterKeyHint="done"

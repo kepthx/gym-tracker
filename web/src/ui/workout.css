@@ -156,3 +156,16 @@
 .finish {
   margin-top: 8px;
 }
+
+/* The card's two quiet controls, on one line below the set row. They share the row rather
+   than stack, so a card with something marked in it is no taller than one without. */
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Reps mode is on: the squares of this card are fields, and this button closes them. */
+.guide-toggle[aria-pressed='true'] {
+  color: var(--accent);
+}

@@ -194,3 +194,43 @@ test('тап отдаёт клавиатуру весу, удержание — 
   await expect(carry.getByRole('button', { name: 'Подход 1' })).toHaveText('45м')
   await expect(carry.getByPlaceholder('кг').first()).toHaveValue('28,5')
 })
+
+/**
+ * The visible way into the reps, beside the hold that reaches one set.
+ *
+ * It exists because the hold cannot be seen and cannot be reached from a keyboard at all —
+ * a correction nobody can find is a correction the app does not have.
+ */
+test('кнопка «Повторения» открывает отмеченные подходы разом', async ({ page }) => {
+  await page.goto('/')
+  await page.getByPlaceholder('Пароль').fill(PASSWORD)
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await page.getByRole('button', { name: /1\. Ноги/ }).click()
+
+  const squat = page.locator('section.exercise').filter({ hasText: 'Присед со штангой' })
+  const reps = squat.getByRole('button', { name: 'Повторения' })
+
+  // Nothing marked yet, so there is nothing to correct and no control offering to.
+  await expect(reps).toHaveCount(0)
+
+  await squat.getByRole('button', { name: 'Подход 1' }).click()
+  await squat.getByRole('button', { name: 'Подход 2' }).click()
+  await expect(squat.locator('.set-btn-done')).toHaveCount(2)
+
+  await reps.click()
+
+  // Both marked sets become fields at once; the first one holds the keyboard.
+  const fields = squat.locator('.reps-field')
+  await expect(fields).toHaveCount(2)
+  await expect(fields.first()).toBeFocused()
+
+  await fields.nth(1).fill('6')
+  await squat.getByRole('button', { name: 'Готово' }).click()
+
+  await expect(squat.locator('.reps-field')).toHaveCount(0)
+  await expect(squat.getByRole('button', { name: 'Подход 1' })).toHaveText('8')
+  await expect(squat.getByRole('button', { name: 'Подход 2' })).toHaveText('6')
+
+  await page.reload()
+  await expect(squat.getByRole('button', { name: 'Подход 2' })).toHaveText('6')
+})
