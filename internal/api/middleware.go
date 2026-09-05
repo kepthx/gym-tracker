@@ -78,7 +78,7 @@ func (a *API) authenticate(w http.ResponseWriter, r *http.Request) (*store.Sessi
 	now := time.Now()
 	session, err := a.store.LookupToken(r.Context(), raw, now)
 	if errors.Is(err, store.ErrTokenInvalid) {
-		clearSessionCookie(w, r)
+		a.clearSessionCookie(w, r)
 		writeError(w, http.StatusUnauthorized, "unauthorized", "требуется вход")
 		return nil, "", false
 	}
@@ -95,7 +95,7 @@ func (a *API) authenticate(w http.ResponseWriter, r *http.Request) (*store.Sessi
 		if expires, err := a.store.SlideToken(r.Context(), raw, a.tokenTTL, now); err == nil {
 			session.ExpiresAt = expires
 			session.CreatedAt = now
-			setSessionCookie(w, r, raw, a.tokenTTL)
+			a.setSessionCookie(w, r, raw, a.tokenTTL)
 		} else {
 			slog.Error("не удалось продлить токен", "ошибка", err)
 		}
@@ -119,20 +119,21 @@ func (a *API) debugSession(r *http.Request) (*store.Session, string, bool) {
 }
 
 // secureHeaders sets the headers a reverse proxy would otherwise have provided.
-func secureHeaders(next http.Handler) http.Handler {
+func (a *API) secureHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
 		h.Set("X-Content-Type-Options", "nosniff")
-		// same-origin sends no referrer off-site at all — including to the video player,
-		// which is why the iframe must not override this with a laxer per-element policy.
+		// same-origin sends no referrer off-site at all.
 		h.Set("Referrer-Policy", "same-origin")
-		// First-party by default, with exactly one exception, spelled out at frame-src
-		// below: no third-party script, style, image, font or connection anywhere.
+		// Strictly first-party, with no exceptions: no third-party script, style, image,
+		// font, frame or connection anywhere. The demonstrations are hosted on this origin
+		// precisely so that nothing has to be opened up here. 'unsafe-inline' for styles is
+		// the one concession, for the inline width of the progress bar.
 		h.Set("Content-Security-Policy",
 			"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "+
 				"img-src 'self' data:; connect-src 'self'; base-uri 'none'; "+
 				"form-action 'self'; frame-ancestors 'none'")
-		if r.TLS != nil {
+		if a.secure(r) {
 			h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
 		next.ServeHTTP(w, r)

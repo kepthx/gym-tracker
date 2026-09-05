@@ -22,6 +22,7 @@ import {
   me,
   OfflineError,
   setBearerToken,
+  type SessionInfo,
 } from './sync/client'
 import { engine } from './sync/engine'
 import { DiagnosticsScreen } from './ui/Diagnostics'
@@ -54,7 +55,7 @@ export function App() {
 
   switch (state.screen.name) {
     case 'login':
-      return <LoginScreen onSuccess={() => void afterLogin()} />
+      return <LoginScreen onSuccess={(session) => void afterLogin(session)} />
     case 'workout':
       return <WorkoutScreen sessionID={state.screen.sessionID} />
     case 'progress':
@@ -186,8 +187,14 @@ async function refreshGuides(): Promise<void> {
   }
 }
 
-async function afterLogin(): Promise<void> {
-  const session = await me()
+async function afterLogin(session: SessionInfo): Promise<void> {
+  // The second copy of the token. The cookie is HttpOnly and WebKit is known to drop it
+  // from a home-screen app; with this copy sent as a Bearer header the server reissues the
+  // cookie, and the "no password at the gym for months" promise survives the loss.
+  const token = session.token ?? null
+  setBearerToken(token)
+  await setMeta('token', token)
+
   patchState({ user: session.user })
   await setMeta('user', session.user)
   // Both start now; only the one the next screen needs is awaited. The guides are ~24 KB

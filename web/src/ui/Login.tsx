@@ -1,8 +1,8 @@
 import { useState } from 'preact/hooks'
-import { ApiError, login, OfflineError } from '../sync/client'
+import { ApiError, login, OfflineError, type SessionInfo } from '../sync/client'
 import './login.css'
 
-export function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
+export function LoginScreen({ onSuccess }: { onSuccess: (session: SessionInfo) => void }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -14,9 +14,9 @@ export function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
     setBusy(true)
     setError('')
     try {
-      await login(password)
+      const session = await login(password)
       setPassword('')
-      onSuccess()
+      onSuccess(session)
     } catch (err) {
       if (err instanceof OfflineError) {
         setError('Нет связи. Записанное сохранено на устройстве.')

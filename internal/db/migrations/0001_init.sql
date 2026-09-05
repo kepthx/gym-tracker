@@ -67,7 +67,7 @@ CREATE TABLE sessions (
   started_at   INTEGER NOT NULL,
   finished_at  INTEGER,                      -- NULL = unfinished
   deleted      INTEGER NOT NULL DEFAULT 0 CHECK (deleted IN (0, 1)),
-  note         TEXT    NOT NULL DEFAULT '',
+  note         TEXT    NOT NULL DEFAULT '',   -- reserved: no operation writes it yet
   updated_ts   INTEGER NOT NULL,
   updated_by   TEXT    NOT NULL DEFAULT '',
   rev          INTEGER NOT NULL
@@ -89,6 +89,8 @@ CREATE TABLE sets (
   done        INTEGER NOT NULL DEFAULT 0 CHECK (done IN (0, 1)),
   weight      REAL,                          -- NULL = unweighted exercise, or no weight entered
   reps        TEXT,                          -- free-form, e.g. '12' | '8/нога' | '30с' | '40м'
+  -- reserved: no operation writes it yet. When one does, it must be a monotone tombstone
+  -- like sessions.deleted, and set.upsert must keep carrying the whole row.
   deleted     INTEGER NOT NULL DEFAULT 0 CHECK (deleted IN (0, 1)),
   updated_ts  INTEGER NOT NULL,
   updated_by  TEXT    NOT NULL DEFAULT '',

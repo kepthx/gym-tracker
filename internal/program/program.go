@@ -19,6 +19,14 @@ import (
 // SupportedVersion is the version of the program file format.
 const SupportedVersion = 1
 
+// Upper bounds on per-exercise numbers. They guard against a typo, not a training plan:
+// "sets": 30 instead of 3 renders thirty columns on a phone, and a rest of 6000 seconds
+// instead of 60 would sit in a timer for an hour and a half.
+const (
+	MaxSetsPerExercise = 20
+	MaxRestSec         = 3600
+)
+
 type Program struct {
 	Version int    `json:"version"`
 	Name    string `json:"name"`
@@ -195,16 +203,18 @@ func validate(p *Program) []string {
 			if strings.TrimSpace(ex.Scheme) == "" {
 				problems = append(problems, exWhere+": пустая scheme")
 			}
-			if ex.Sets < 1 {
-				problems = append(problems, fmt.Sprintf("%s: sets=%d, нужно >= 1", exWhere, ex.Sets))
+			if ex.Sets < 1 || ex.Sets > MaxSetsPerExercise {
+				problems = append(problems, fmt.Sprintf("%s: sets=%d, нужно от 1 до %d",
+					exWhere, ex.Sets, MaxSetsPerExercise))
 			}
 			if strings.TrimSpace(ex.DefaultReps) == "" {
 				// The default has to be right in most cases, or editing the reps turns from
 				// an exception into a mandatory step.
 				problems = append(problems, exWhere+": пустое default_reps")
 			}
-			if ex.RestSec < 0 {
-				problems = append(problems, fmt.Sprintf("%s: rest_sec=%d, нужно >= 0", exWhere, ex.RestSec))
+			if ex.RestSec < 0 || ex.RestSec > MaxRestSec {
+				problems = append(problems, fmt.Sprintf("%s: rest_sec=%d, нужно от 0 до %d",
+					exWhere, ex.RestSec, MaxRestSec))
 			}
 		}
 	}

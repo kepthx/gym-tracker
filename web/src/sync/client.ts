@@ -37,7 +37,12 @@ const API = `${import.meta.env.BASE_URL}api`
 
 let bearer: string | null = null
 
-/** Fallback path to the token for when the cookie is gone but the copy in storage remains. */
+/**
+ * Fallback path to the token for when the cookie is gone but the copy in storage remains.
+ *
+ * WebKit is known to drop cookies from a home-screen app. The server reissues the cookie on
+ * any authenticated request, so as long as one of the two copies survives the login does.
+ */
 export function setBearerToken(token: string | null): void {
   bearer = token
 }
@@ -83,6 +88,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 export interface SessionInfo {
   user: User
   expires_at: number
+  /**
+   * The raw token, present in the login response only. The cookie is HttpOnly, so this is
+   * the one chance to keep the second copy that the Bearer fallback runs on.
+   */
+  token?: string
 }
 
 export function login(password: string, username?: string): Promise<SessionInfo> {

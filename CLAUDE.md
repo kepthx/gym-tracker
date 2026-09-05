@@ -76,8 +76,9 @@ Mechanisms that make the above hold:
   being idempotent by construction.
 - Last-write-wins compares `(updated_ts, updated_by)` lexicographically — the device id breaks
   same-millisecond ties identically on every node ([`newer`](internal/store/merge.go)).
-- Client timestamps are clamped to `[-7d, +1min]` around server time, so a phone with a broken
-  clock cannot win every future comparison.
+- Client timestamps are clamped to at most `+1min` past server time, so a phone with a broken
+  clock cannot win every future comparison. There is deliberately no lower bound: a stale op
+  must lose LWW, not be promoted to "a week ago".
 - `session.finish` and `session.delete` merge *monotonically* (smallest finish time wins; a
   tombstone is never undone), which is what makes them commutative. `session.start` and
   `set.upsert` use LWW.
@@ -219,6 +220,12 @@ store of its own, so there is no IndexedDB migration, and it is read before any 
   a round-trip test keeps the export honest.
 - All configuration is `GYM_*` environment variables ([config.go](internal/config/config.go)).
   Setting `GYM_DOMAIN` switches on port 443 with in-process autocert; empty means plain HTTP.
+  Behind a reverse proxy set `GYM_TRUST_PROXY=1`: the login limiter then keys on the address
+  the proxy appended to `X-Forwarded-For` instead of the proxy's own, and
+  `X-Forwarded-Proto: https` makes cookies Secure and enables HSTS. Never set it when the
+  process faces the network itself.
+- `sessions.note` and `sets.deleted` exist in the schema and the client types but no operation
+  writes them yet; they are reserved, not dead.
 
 ## Tests
 

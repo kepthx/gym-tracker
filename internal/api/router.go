@@ -33,11 +33,28 @@ func (a *API) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/admin/diag", a.requireAdmin(a.getDiag))
 	mux.HandleFunc("POST /api/admin/program/reload", a.requireAdmin(a.postProgramReload))
 	mux.HandleFunc("POST /api/admin/guides/reload", a.requireAdmin(a.postGuidesReload))
+
+	// Anything else under /api/ is a 404, not the SPA shell: the catch-all "GET /" would
+	// otherwise answer a mistyped endpoint with index.html and a 200, and a client bug would
+	// show up as a JSON parse error instead of as the missing route it is.
+	//
+	// Registered per method rather than as a bare "/api/": Go's mux refuses a method-less
+	// pattern next to the method-qualified "GET /" catch-all, since neither is more specific
+	// than the other. HEAD is absent on purpose — a GET pattern already matches it, and a
+	// separate HEAD entry would conflict with every GET route above.
+	for _, method := range []string{
+		http.MethodGet, http.MethodPost, http.MethodPut,
+		http.MethodPatch, http.MethodDelete, http.MethodOptions,
+	} {
+		mux.HandleFunc(method+" /api/", func(w http.ResponseWriter, r *http.Request) {
+			writeError(w, http.StatusNotFound, "not_found", "нет такого метода API")
+		})
+	}
 }
 
 // Wrap wraps a finished handler in the layers common to the whole service.
-func Wrap(h http.Handler) http.Handler {
-	return secureHeaders(checkCSRF(h))
+func (a *API) Wrap(h http.Handler) http.Handler {
+	return a.secureHeaders(checkCSRF(h))
 }
 
 type programResponse struct {

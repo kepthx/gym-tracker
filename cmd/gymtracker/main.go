@@ -95,16 +95,20 @@ func serve(ctx context.Context) error {
 
 	backups := backup.New(database, cfg.BackupDir)
 	go backups.Loop(ctx)
-	st.SetOnSessionFinished(func() { backups.MaybeRun(ctx, time.Now()) })
+	// In a goroutine: the hook runs inside the request that finished the workout, and
+	// VACUUM INTO plus the integrity check would otherwise hold that response — and the
+	// single writer connection — for the length of a backup.
+	st.SetOnSessionFinished(func() { go backups.MaybeRun(ctx, time.Now()) })
 
 	mux := http.NewServeMux()
-	api.New(api.Deps{
-		Store:     st,
-		TokenTTL:  cfg.TokenTTL,
-		DebugAuth: cfg.DebugAuth,
-		Backups:   backups,
-		DBPath:    cfg.DBPath,
-		Version:   version,
+	a := api.New(api.Deps{
+		Store:      st,
+		TokenTTL:   cfg.TokenTTL,
+		DebugAuth:  cfg.DebugAuth,
+		TrustProxy: cfg.TrustProxy,
+		Backups:    backups,
+		DBPath:     cfg.DBPath,
+		Version:    version,
 		ReloadPrograms: func(ctx context.Context) (map[string]string, error) {
 			// Changing a program means editing a file plus this call. No code change needed.
 			fresh, err := program.LoadDir(cfg.ProgramsDir)
@@ -126,7 +130,8 @@ func serve(ctx context.Context) error {
 			// quietly reload as empty and wipe the reference off every device.
 			return guide.Reload(cfg.GuidesPath, cfg.MediaDir)
 		},
-	}).Routes(mux)
+	})
+	a.Routes(mux)
 
 	// The frontend is embedded in the binary: deployment is copying one file.
 	assets, err := web.Handler()
@@ -157,7 +162,7 @@ func serve(ctx context.Context) error {
 		CertDir: cfg.CertDir,
 		Email:   cfg.ACMEEmail,
 		Staging: cfg.ACMEStaging,
-	}, api.Wrap(mux))
+	}, a.Wrap(mux))
 }
 
 // pruneLoop clears out expired tokens, old login attempts and operation ledger rows.

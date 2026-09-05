@@ -36,19 +36,33 @@ func newIPLimiter(every time.Duration, burst int) *ipLimiter {
 }
 
 // allow debits one attempt from this IP's bucket.
-func (l *ipLimiter) allow(ip string, now time.Time) bool {
+//
+// The returned refund hands the attempt back. Only failures should count — a successful
+// login is not an attempt to brute-force anything, and the database layer already counts
+// failures alone — but the debit has to happen up front, or a burst of parallel guesses
+// would all pass the check before any of them is charged. So the token is reserved here
+// and returned by the caller once the password has checked out.
+func (l *ipLimiter) allow(ip string, now time.Time) (ok bool, refund func()) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	l.sweep(now)
 
-	b, ok := l.buckets[ip]
-	if !ok {
+	b, found := l.buckets[ip]
+	if !found {
 		b = &ipBucket{limiter: rate.NewLimiter(rate.Every(l.every), l.burst)}
 		l.buckets[ip] = b
 	}
 	b.lastSeen = now
-	return b.limiter.AllowN(now, 1)
+
+	r := b.limiter.ReserveN(now, 1)
+	if !r.OK() || r.DelayFrom(now) > 0 {
+		// Not allowed now. A reservation with a delay would still be charged, so give it
+		// back: the request is refused, it must not also eat into the next one.
+		r.CancelAt(now)
+		return false, func() {}
+	}
+	return true, func() { r.CancelAt(now) }
 }
 
 // sweep drops addresses that have not been seen for a while, so the map does not grow

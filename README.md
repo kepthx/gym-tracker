@@ -79,7 +79,6 @@ web/src/
   sync/engine.ts       queue draining, backoff, save status
   ui/                  screens
 testdata/merge_cases.json   truth table shared by Go and TypeScript
-testdata/youtube_ids.json   the same, for the video id rule
 programs/              training programs, one file per user
 guides/exercises.json  the technique reference, one file for everyone
 deploy/                systemd unit and deployment instructions

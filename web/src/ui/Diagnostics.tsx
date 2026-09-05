@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks'
-import { deadLetters, getMeta, outboxHead } from '../db/idb'
+import { deadLetters, dismissDeadLetters, getMeta, outboxHead } from '../db/idb'
 import { engine } from '../sync/engine'
 import { getState, navigate } from '../state/store'
 import type { DeadLetter, Op } from '../types'
@@ -27,6 +27,17 @@ export function DiagnosticsScreen() {
       setPersisted((await getMeta<boolean>('persisted')) ?? null)
     })()
   }, [status])
+
+  /**
+   * Acknowledging a rejection. The reason has been read; the entry goes, and with it the
+   * red indicator — an indicator that is always red is one nobody reads. The data behind the
+   * operation stays on the device: this drops the record of the refusal, not the set.
+   */
+  async function dismiss(opIDs: string[]) {
+    await dismissDeadLetters(opIDs)
+    setDead(await deadLetters())
+    await engine.recount()
+  }
 
   async function copyQueue() {
     const dump = JSON.stringify({ queue, dead, cursor, status }, null, 2)
@@ -88,13 +99,32 @@ export function DiagnosticsScreen() {
           {dead.length > 0 && (
             <>
               <h2 class="progress-section">Отклонено сервером</h2>
+              <p class="diag-note">
+                Сервер не принял эти действия. Записанное осталось на устройстве; убрать запись
+                об отказе можно, когда причина понятна.
+              </p>
               <ul class="diag-list">
                 {dead.map((d) => (
-                  <li key={d.op_id}>
-                    <code>{d.op.type}</code> — {d.reason}
+                  <li key={d.op_id} class="diag-dead">
+                    <span>
+                      <code>{d.op.type}</code> — {d.reason}
+                    </span>
+                    <button class="btn btn-quiet btn-small" onClick={() => void dismiss([d.op_id])}>
+                      Убрать
+                    </button>
                   </li>
                 ))}
               </ul>
+              {dead.length > 1 && (
+                <div class="diag-actions">
+                  <button
+                    class="btn btn-quiet"
+                    onClick={() => void dismiss(dead.map((d) => d.op_id))}
+                  >
+                    Убрать все
+                  </button>
+                </div>
+              )}
             </>
           )}
 

@@ -54,6 +54,14 @@ export class SyncEngine {
   }
   private listeners = new Set<Listener>()
   private inFlight = false
+  /** A flush was asked for while one was running: run again as soon as it finishes. */
+  private dirty = false
+  /**
+   * How many operations go in one request. Normally BATCH_LIMIT; halved after the server
+   * refuses a whole batch with a 4xx, so the one operation it objects to can be isolated
+   * and dead-lettered instead of jamming everything behind it.
+   */
+  private batchLimit = BATCH_LIMIT
   private debounceTimer: ReturnType<typeof setTimeout> | null = null
   private retryTimer: ReturnType<typeof setTimeout> | null = null
   private pollTimer: ReturnType<typeof setInterval> | null = null
@@ -142,18 +150,34 @@ export class SyncEngine {
     this.schedule(0)
   }
 
+  /**
+   * Drains the queue. A call that lands while a flush is running is not dropped: it marks
+   * the engine dirty, and the running flush goes round once more when it finishes.
+   * Otherwise a set tapped during a sync would wait for the 15-second poll.
+   */
   async flush(): Promise<void> {
-    if (this.inFlight) return
+    if (this.inFlight) {
+      this.dirty = true
+      return
+    }
     this.inFlight = true
     try {
-      await this.flushOnce()
+      do {
+        this.dirty = false
+        await this.flushOnce()
+      } while (this.dirty)
     } finally {
       this.inFlight = false
     }
   }
 
+  /** Rereads the queue and dead-letter counts — after the user dismissed a rejection, say. */
+  async recount(): Promise<void> {
+    await this.refreshCounts()
+  }
+
   private async flushOnce(): Promise<void> {
-    const pending = await outboxHead(BATCH_LIMIT)
+    const pending = await outboxHead(this.batchLimit)
     const since = (await getMeta<number>('cursor')) ?? 0
     const known = (await allPrograms()).map((p) => p.hash)
 
@@ -183,6 +207,13 @@ export class SyncEngine {
 
       this.serverFailures = 0
       this.backoffStep = 0
+      if (this.batchLimit < BATCH_LIMIT) {
+        // A narrowed batch went through: the rest of the queue is still waiting behind
+        // it and must not wait for the poll. A full-width batch does not loop here — an
+        // operation the server leaves without a verdict would otherwise spin forever.
+        this.batchLimit = BATCH_LIMIT
+        this.dirty = true
+      }
       await setMeta('clock_skew', Date.now() - response.server_time)
 
       // A successful sync clears the blocking states. Without this the red "login required"
@@ -200,7 +231,7 @@ export class SyncEngine {
       // The server truncated the response at the limit — go straight for the next page.
       if (response.has_more) this.schedule(0)
     } catch (err) {
-      await this.handleFailure(err)
+      await this.handleFailure(err, pending)
     }
   }
 
@@ -236,7 +267,10 @@ export class SyncEngine {
     await moveToDeadLetter(rejected, Date.now())
   }
 
-  private async handleFailure(err: unknown): Promise<void> {
+  private async handleFailure(
+    err: unknown,
+    pending: { seq: number; op: { op_id: string } }[],
+  ): Promise<void> {
     await this.refreshCounts()
 
     if (err instanceof OfflineError) {
@@ -260,6 +294,28 @@ export class SyncEngine {
         state: this.serverFailures >= SERVER_FAILURES_BEFORE_ALARM ? 'error' : 'local',
       })
       this.scheduleRetry(err.retryAfter > 0 ? err.retryAfter * 1000 : undefined)
+      return
+    }
+
+    if (err instanceof ApiError && pending.length > 0) {
+      // The server refused the whole batch — a 4xx. Retrying it verbatim would fail the
+      // same way forever and jam everything behind it, so partial failability has to be
+      // recovered by hand: narrow the batch until the offending operation stands alone,
+      // then dead-letter it with the server's reason and carry on with the rest.
+      if (pending.length > 1) {
+        this.batchLimit = Math.max(1, Math.floor(pending.length / 2))
+        this.patch({ state: 'syncing' })
+        this.dirty = true
+        return
+      }
+      const only = pending[0]!
+      await moveToDeadLetter(
+        [{ seq: only.seq, op: only.op as never, reason: err.message }],
+        Date.now(),
+      )
+      this.batchLimit = BATCH_LIMIT
+      await this.refreshCounts()
+      this.dirty = true
       return
     }
 

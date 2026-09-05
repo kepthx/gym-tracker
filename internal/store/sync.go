@@ -222,6 +222,12 @@ func (s *Store) applySessionStart(
 				effTS, deviceID, rev, op.SessionID); err != nil {
 				return res, fmt.Errorf("обновить тренировку: %w", err)
 			}
+			// The start may have moved: a neighbour that used to finish before it could
+			// now run past it, and the invariant is that no workout continues past the
+			// start of the next one.
+			if err := clampOverlappingFinishes(ctx, tx, userID, op.SessionID, op.StartedAt); err != nil {
+				return res, err
+			}
 		}
 		return res, nil
 

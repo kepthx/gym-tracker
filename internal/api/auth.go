@@ -41,17 +41,23 @@ type userBody struct {
 type sessionResponse struct {
 	User      userBody `json:"user"`
 	ExpiresAt int64    `json:"expires_at"`
+	// Token is the raw login token, returned once, from login only. The cookie is HttpOnly,
+	// so this is the only way the client ever sees it — and it needs to: WebKit is known to
+	// drop cookies from a home-screen app, and a second copy in IndexedDB, sent as a Bearer
+	// header, is what keeps the "no password at the gym for months" promise when it does.
+	Token string `json:"token,omitempty"`
 }
 
 func (a *API) postLogin(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
-	ip := clientIP(r)
+	ip := a.clientIP(r)
 
 	// The delay is the same for every outcome, including a nonexistent username: otherwise
 	// response timing could be used to enumerate names.
 	defer sleepJitter(a.loginDelay)
 
-	if !a.loginLimiter.allow(ip, now) {
+	allowed, refund := a.loginLimiter.allow(ip, now)
+	if !allowed {
 		writeRetryAfter(w, time.Minute, "слишком много попыток входа")
 		return
 	}
@@ -104,6 +110,8 @@ func (a *API) postLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "invalid_credentials", "неверный пароль")
 		return
 	}
+	// Only failures count against the per-IP bucket: the attempt is given back.
+	refund()
 
 	raw, expires, err := a.store.CreateToken(r.Context(), user.ID, a.tokenTTL, r.UserAgent(), now)
 	if err != nil {
@@ -112,8 +120,12 @@ func (a *API) postLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setSessionCookie(w, r, raw, a.tokenTTL)
-	writeJSON(w, http.StatusOK, sessionResponse{User: toUserBody(user), ExpiresAt: expires.UnixMilli()})
+	a.setSessionCookie(w, r, raw, a.tokenTTL)
+	writeJSON(w, http.StatusOK, sessionResponse{
+		User:      toUserBody(user),
+		ExpiresAt: expires.UnixMilli(),
+		Token:     raw,
+	})
 }
 
 // resolveUsername lets the login screen get by with a single password field while there
@@ -141,7 +153,7 @@ func (a *API) postLogout(w http.ResponseWriter, r *http.Request) {
 			slog.Error("не удалось отозвать токен", "ошибка", err)
 		}
 	}
-	clearSessionCookie(w, r)
+	a.clearSessionCookie(w, r)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -152,7 +164,7 @@ func (a *API) getMe(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func setSessionCookie(w http.ResponseWriter, r *http.Request, raw string, ttl time.Duration) {
+func (a *API) setSessionCookie(w http.ResponseWriter, r *http.Request, raw string, ttl time.Duration) {
 	http.SetCookie(w, &http.Cookie{
 		Name:  cookieName,
 		Value: raw,
@@ -162,21 +174,30 @@ func setSessionCookie(w http.ResponseWriter, r *http.Request, raw string, ttl ti
 		// is the only way a login survives into next month without a password at the gym.
 		MaxAge:   int(ttl.Seconds()),
 		HttpOnly: true,
-		Secure:   r.TLS != nil,
+		Secure:   a.secure(r),
 		SameSite: http.SameSiteLaxMode,
 	})
 }
 
-func clearSessionCookie(w http.ResponseWriter, r *http.Request) {
+func (a *API) clearSessionCookie(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     cookieName,
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
-		Secure:   r.TLS != nil,
+		Secure:   a.secure(r),
 		SameSite: http.SameSiteLaxMode,
 	})
+}
+
+// secure reports whether the request reached the user over TLS — directly, or through a
+// trusted proxy that terminated it.
+func (a *API) secure(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+	return a.trustProxy && strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
 }
 
 // tokenFromRequest accepts a token from either the cookie or the Authorization header.
@@ -206,9 +227,26 @@ func writeRetryAfter(w http.ResponseWriter, wait time.Duration, message string) 
 	writeError(w, http.StatusTooManyRequests, "rate_limited", message)
 }
 
-func clientIP(r *http.Request) string {
-	// The app listens to the outside world itself, with no reverse proxy, so X-Forwarded-For
-	// headers cannot be trusted: anyone can set them and slip past the limiter.
+// clientIP is the address the login limiter keys on.
+//
+// Without a trusted proxy the forwarding headers are whatever the client wrote in them, so
+// only the socket address counts. Behind one, the socket address is the proxy's own — every
+// visitor would share a single bucket of five attempts, and a stranger could lock the real
+// user out of logging in — so the address the proxy appended is used instead. The LAST entry
+// of X-Forwarded-For is the one the trusted hop added; anything before it came from the
+// client and is not to be believed.
+func (a *API) clientIP(r *http.Request) string {
+	if a.trustProxy {
+		if ip := strings.TrimSpace(r.Header.Get("X-Real-IP")); ip != "" {
+			return ip
+		}
+		if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
+			parts := strings.Split(fwd, ",")
+			if ip := strings.TrimSpace(parts[len(parts)-1]); ip != "" {
+				return ip
+			}
+		}
+	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		return r.RemoteAddr

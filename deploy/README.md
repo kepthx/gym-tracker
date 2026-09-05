@@ -228,9 +228,8 @@ Same rules as a program: a broken file stops startup and names every violation a
 reload it returns 422 and leaves the previous reference in place. A missing file is not an
 error — the cards simply have nothing to expand.
 
-`youtube_id` is the eleven-character video id, **never a URL**: it is substituted into the
-src of an iframe, and the URL is assembled in code. An exercise with no guide, and a guide
-for an exercise no longer in the program, are both fine.
+An exercise with no guide, and a guide for an exercise no longer in the program, are both
+fine. Demonstrations are self-hosted (see above); nothing is embedded from a third party.
 
 ## Updating
 
@@ -242,6 +241,33 @@ sudo systemctl restart gymtracker
 ```
 
 Database migrations are applied automatically at startup.
+
+## Behind a reverse proxy
+
+The arrangement above has the binary own ports 80 and 443. If a proxy has to sit in front
+instead — because something else already holds 443 — leave `GYM_DOMAIN` unset, listen on a
+loopback address, build with `GYM_BASE=/prefix/ make release` if the app lives under a path,
+and set **`GYM_TRUST_PROXY=1`**:
+
+```
+GYM_ADDR=127.0.0.1:8071
+GYM_TRUST_PROXY=1
+```
+
+With it, the login limiter keys on the address the proxy appended to `X-Forwarded-For`
+(or `X-Real-IP`) rather than on the proxy's own loopback address — otherwise every visitor
+shares one bucket of five attempts and a stranger can lock you out of logging in. It also
+makes `X-Forwarded-Proto: https` count as TLS, so cookies carry `Secure` and HSTS is sent.
+The proxy must set those headers itself:
+
+```nginx
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header Host $host;
+```
+
+Never set `GYM_TRUST_PROXY` when the binary faces the network directly: the headers are then
+whatever the client wrote in them.
 
 ## A second user
 

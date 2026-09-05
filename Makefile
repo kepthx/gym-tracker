@@ -35,6 +35,11 @@ check: ## Formatting, static analysis, types
 	go vet ./...
 	npm --prefix web run typecheck
 
+.PHONY: vuln
+vuln: ## Known vulnerabilities in Go and npm dependencies (needs network)
+	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+	npm --prefix web audit --omit=dev
+
 .PHONY: dev
 dev: ## Start the development server (frontend separately: npm --prefix web run dev)
 	GYM_ADDR=127.0.0.1:8071 go run ./cmd/gymtracker

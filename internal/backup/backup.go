@@ -27,8 +27,9 @@ type Manager struct {
 	db  *db.DB
 	dir string
 
-	mu   sync.Mutex
-	last time.Time
+	mu      sync.Mutex
+	last    time.Time
+	running bool
 }
 
 func New(d *db.DB, dir string) *Manager {
@@ -154,13 +155,24 @@ func (m *Manager) Latest() (string, error) {
 
 // MaybeRun takes a backup if the last one is older than six hours.
 // Called after a workout is finished so that it lands in a backup right away.
+//
+// It is called from a goroutine per finished workout, so two calls can overlap; the
+// running flag makes sure only one of them actually takes a backup.
 func (m *Manager) MaybeRun(ctx context.Context, now time.Time) {
 	m.mu.Lock()
 	fresh := !m.last.IsZero() && now.Sub(m.last) < opportunisticAge
-	m.mu.Unlock()
-	if fresh {
+	if fresh || m.running {
+		m.mu.Unlock()
 		return
 	}
+	m.running = true
+	m.mu.Unlock()
+	defer func() {
+		m.mu.Lock()
+		m.running = false
+		m.mu.Unlock()
+	}()
+
 	if _, err := m.Run(ctx, now); err != nil {
 		slog.Error("не удалось сделать копию", "ошибка", err)
 	}

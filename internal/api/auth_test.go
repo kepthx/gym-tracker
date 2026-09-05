@@ -55,7 +55,7 @@ func newHarnessAt(t *testing.T, dbPath string) *harness {
 
 	mux := http.NewServeMux()
 	a.Routes(mux)
-	server := httptest.NewServer(Wrap(mux))
+	server := httptest.NewServer(a.Wrap(mux))
 
 	h := &harness{t: t, api: a, store: st, db: d, server: server, dbPath: dbPath}
 	t.Cleanup(func() { server.Close(); d.Close() })
@@ -159,6 +159,11 @@ func TestLoginSucceedsAndIssuesCookie(t *testing.T) {
 	}
 	if body.ExpiresAt <= time.Now().UnixMilli() {
 		t.Error("срок действия токена в прошлом")
+	}
+	// The raw token comes back once, from login: the cookie is HttpOnly, and the copy the
+	// client keeps in IndexedDB is what survives WebKit dropping the cookie.
+	if body.Token == "" {
+		t.Error("вход не вернул токен в теле ответа")
 	}
 
 	var cookie *http.Cookie
@@ -529,5 +534,117 @@ func TestPruneAuthRemovesExpiredTokens(t *testing.T) {
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("живой токен перестал работать после уборки: %d", resp.StatusCode)
+	}
+}
+
+// Behind a trusted proxy the socket address is the proxy's own; the login limiter has to key
+// on the address the proxy appended, or every visitor shares one bucket of attempts.
+func TestTrustedProxyLimitsByForwardedAddress(t *testing.T) {
+	h := newHarness(t)
+	h.addUser("igor", "очень-секретный-пароль", false)
+	h.api.trustProxy = true
+	h.api.loginLimiter = newIPLimiter(10*time.Second, 2)
+
+	// Two strangers exhaust their own buckets…
+	for i := 0; i < 4; i++ {
+		resp := h.post("/api/auth/login", `{"username":"кто-то","password":"не-тот"}`,
+			"X-Forwarded-For", fmt.Sprintf("203.0.113.%d", i%2))
+		resp.Body.Close()
+	}
+	// …and the real user, from a third address, still gets in.
+	resp := h.post("/api/auth/login", `{"username":"igor","password":"очень-секретный-пароль"}`,
+		"X-Forwarded-For", "198.51.100.7")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("вход через прокси вернул %d — лимит на IP общий для всех", resp.StatusCode)
+	}
+}
+
+func TestForwardedHeadersAreIgnoredWithoutTrustedProxy(t *testing.T) {
+	h := newHarness(t)
+	h.addUser("igor", "очень-секретный-пароль", false)
+	h.api.loginLimiter = newIPLimiter(10*time.Second, 2)
+
+	// A client cannot dodge the limiter by inventing a new address per attempt.
+	var limited bool
+	for i := 0; i < 5; i++ {
+		resp := h.post("/api/auth/login", `{"username":"кто-то","password":"не-тот"}`,
+			"X-Forwarded-For", fmt.Sprintf("203.0.113.%d", i))
+		resp.Body.Close()
+		if resp.StatusCode == http.StatusTooManyRequests {
+			limited = true
+			break
+		}
+	}
+	if !limited {
+		t.Fatal("подделанный X-Forwarded-For обошёл лимит на IP")
+	}
+}
+
+func TestTrustedProxyTLSMakesCookieSecure(t *testing.T) {
+	h := newHarness(t)
+	h.addUser("igor", "очень-секретный-пароль", false)
+	h.api.trustProxy = true
+
+	resp := h.post("/api/auth/login", `{"username":"igor","password":"очень-секретный-пароль"}`,
+		"X-Forwarded-Proto", "https")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("статус %d", resp.StatusCode)
+	}
+	var cookie *http.Cookie
+	for _, c := range resp.Cookies() {
+		if c.Name == cookieName {
+			cookie = c
+		}
+	}
+	if cookie == nil || !cookie.Secure {
+		t.Error("cookie без Secure, хотя прокси сообщил о TLS")
+	}
+	if resp.Header.Get("Strict-Transport-Security") == "" {
+		t.Error("нет HSTS, хотя прокси сообщил о TLS")
+	}
+}
+
+// A mistyped endpoint is a 404, not the SPA shell with a 200.
+func TestUnknownAPIRouteIs404(t *testing.T) {
+	h := newHarness(t)
+	resp := h.get("/api/no-such-thing")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("статус %d, ожидался 404", resp.StatusCode)
+	}
+	if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		t.Errorf("Content-Type %q, ожидался JSON", ct)
+	}
+}
+
+// Logging in correctly, again and again, is not brute force: several devices behind one
+// address, or a test suite, must not be told to wait a minute after the fifth success.
+func TestSuccessfulLoginsAreNotRateLimited(t *testing.T) {
+	h := newHarness(t)
+	h.addUser("igor", "очень-секретный-пароль", false)
+	h.api.loginLimiter = newIPLimiter(10*time.Second, 2)
+
+	for i := 0; i < 6; i++ {
+		resp := h.post("/api/auth/login", `{"username":"igor","password":"очень-секретный-пароль"}`)
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("успешный вход №%d вернул %d — удачные попытки съедают лимит", i+1, resp.StatusCode)
+		}
+	}
+
+	// The bucket is still armed against guesses, though.
+	var limited bool
+	for i := 0; i < 4; i++ {
+		resp := h.post("/api/auth/login", `{"username":"igor","password":"не-тот"}`)
+		resp.Body.Close()
+		if resp.StatusCode == http.StatusTooManyRequests {
+			limited = true
+			break
+		}
+	}
+	if !limited {
+		t.Fatal("после удачных входов лимит на неудачные попытки перестал работать")
 	}
 }

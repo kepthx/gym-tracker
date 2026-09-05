@@ -31,6 +31,11 @@ type Config struct {
 	// DebugAuth enables the authentication stub via the X-Debug-User header.
 	// For developing the sync core only; off by default.
 	DebugAuth bool
+	// TrustProxy says a reverse proxy terminates TLS and forwards to this process. The
+	// client address for the login limiter then comes from X-Forwarded-For / X-Real-IP,
+	// and X-Forwarded-Proto=https makes cookies Secure and enables HSTS. Must stay off
+	// when the process faces the network itself: the headers are then client-supplied.
+	TrustProxy bool
 
 	// Domain switches on production mode: a listener on 443 with automatic certificate
 	// issuance. An empty value means plain HTTP on Addr.
@@ -55,6 +60,7 @@ func Load() (*Config, error) {
 		BackupDir:   env("GYM_BACKUP_DIR", filepath.Join("data", "backups")),
 		TokenTTL:    180 * 24 * time.Hour,
 		DebugAuth:   os.Getenv("GYM_DEBUG_AUTH") == "1",
+		TrustProxy:  os.Getenv("GYM_TRUST_PROXY") == "1",
 
 		Domain:      os.Getenv("GYM_DOMAIN"),
 		CertDir:     env("GYM_CERT_DIR", filepath.Join("data", "autocert")),

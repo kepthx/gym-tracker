@@ -31,6 +31,10 @@ type Deps struct {
 	ReloadGuides func() (*guide.Set, error)
 	// MediaDir is where the exercise demonstrations are served from.
 	MediaDir string
+	// TrustProxy says a reverse proxy sits in front of the process: the client address is
+	// taken from X-Forwarded-For / X-Real-IP, and X-Forwarded-Proto=https counts as TLS.
+	// Off by default — with no proxy those headers are whatever the client wrote in them.
+	TrustProxy bool
 }
 
 // Backups is what the API needs to know about backups.
@@ -60,6 +64,7 @@ type API struct {
 	guides       atomic.Pointer[guide.Set]
 	reloadGuides func() (*guide.Set, error)
 	mediaDir     string
+	trustProxy   bool
 }
 
 func New(deps Deps) *API {
@@ -77,6 +82,7 @@ func New(deps Deps) *API {
 		reloadPrograms: deps.ReloadPrograms,
 		reloadGuides:   deps.ReloadGuides,
 		mediaDir:       deps.MediaDir,
+		trustProxy:     deps.TrustProxy,
 		// Five attempts in a row, then one every ten seconds. Someone who forgot their
 		// password will not notice the difference; brute force becomes pointless.
 		loginLimiter: newIPLimiter(10*time.Second, 5),

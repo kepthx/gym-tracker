@@ -2,28 +2,24 @@ package store
 
 import "time"
 
-// The window client timestamps are clamped into.
+// clampFuture is how far ahead of server time a client timestamp may sit.
 //
 // Without the clamp, a phone whose clock is a year ahead wins every subsequent
 // last-write-wins comparison forever — including comparisons against data that is
 // demonstrably fresher. The clamp costs one line and does not affect normal operation.
-const (
-	clampPast   = 7 * 24 * time.Hour
-	clampFuture = time.Minute
-)
+//
+// There is deliberately no lower bound. An old timestamp simply loses last-write-wins,
+// which is the right outcome for a stale operation: raising it to "now minus a week"
+// would let a phone that spent a month offline overwrite writes another device made in
+// that window, inverting the very rule the clamp exists to protect.
+const clampFuture = time.Minute
 
-// clampTS brings a client timestamp into a sane window around server time.
+// clampTS brings a client timestamp down to at most a minute past server time.
 func clampTS(clientTS int64, now time.Time) int64 {
-	lo := now.Add(-clampPast).UnixMilli()
-	hi := now.Add(clampFuture).UnixMilli()
-	switch {
-	case clientTS < lo:
-		return lo
-	case clientTS > hi:
+	if hi := now.Add(clampFuture).UnixMilli(); clientTS > hi {
 		return hi
-	default:
-		return clientTS
 	}
+	return clientTS
 }
 
 // newer compares (timestamp, device) pairs lexicographically.

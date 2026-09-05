@@ -334,6 +334,20 @@ export async function moveToDeadLetter(
 }
 
 /**
+ * Removes acknowledged rejections. The user has read the reason on the diagnostics screen
+ * and decided; leaving the entry would keep the indicator red forever, and an indicator that
+ * is always red is one nobody reads.
+ */
+export async function dismissDeadLetters(opIDs: string[]): Promise<void> {
+  if (opIDs.length === 0) return
+  const db = await openDB()
+  const tx = db.transaction(STORE.deadletter, 'readwrite')
+  const dead = tx.objectStore(STORE.deadletter)
+  for (const id of opIDs) dead.delete(id)
+  await done(tx)
+}
+
+/**
  * Wipes local data on logout.
  *
  * The queue and the dead letters are deliberately NOT touched: an unsent workout may be

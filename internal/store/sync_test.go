@@ -496,11 +496,29 @@ func TestFutureClockIsClamped(t *testing.T) {
 	}
 }
 
-func TestPastClockIsClamped(t *testing.T) {
-	got := clampTS(testNow.AddDate(-5, 0, 0).UnixMilli(), testNow)
-	want := testNow.Add(-clampPast).UnixMilli()
-	if got != want {
-		t.Fatalf("зажатое время %d, ожидалось %d", got, want)
+// A stale operation must lose, not be promoted: a phone that spent a month offline must
+// not overwrite what another device recorded in the meantime.
+func TestStaleOpLosesToFresherWrite(t *testing.T) {
+	s := newTestStore(t)
+	userID := seedUser(t, s, "igor", programA)
+	session := uuidN(100)
+
+	apply(t, s, userID, "tablet", []Op{
+		opStart(1, session, "d1", at(0), at(0), programA),
+		opSet(2, session, "bench_bb", 0, true, ptr(85.0), ptr("6"), testNow.AddDate(0, 0, -10).UnixMilli()),
+	})
+	// Arrives now, but was recorded a month ago — before the tablet's write.
+	apply(t, s, userID, "phone", []Op{
+		opSet(3, session, "bench_bb", 0, true, ptr(80.0), ptr("5"), testNow.AddDate(0, -1, 0).UnixMilli()),
+	})
+
+	var weight float64
+	if err := s.db.R.QueryRowContext(context.Background(),
+		`SELECT weight FROM sets WHERE session_id = ?`, session).Scan(&weight); err != nil {
+		t.Fatalf("прочитать подход: %v", err)
+	}
+	if weight != 85 {
+		t.Fatalf("вес %v, ожидался 85 — устаревшая запись победила свежую", weight)
 	}
 }
 
@@ -837,7 +855,7 @@ func TestClampBoundaries(t *testing.T) {
 		{"внутри окна", at(0), at(0)},
 		{"чуть в будущем", testNow.Add(30 * time.Second).UnixMilli(), testNow.Add(30 * time.Second).UnixMilli()},
 		{"далеко в будущем", testNow.Add(time.Hour).UnixMilli(), testNow.Add(clampFuture).UnixMilli()},
-		{"далеко в прошлом", testNow.Add(-30 * 24 * time.Hour).UnixMilli(), testNow.Add(-clampPast).UnixMilli()},
+		{"далеко в прошлом", testNow.Add(-30 * 24 * time.Hour).UnixMilli(), testNow.Add(-30 * 24 * time.Hour).UnixMilli()},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -883,5 +901,34 @@ func TestStatusesHelperCoversWholeBatch(t *testing.T) {
 		if st != StatusApplied {
 			t.Fatalf("неожиданный статус %s", st)
 		}
+	}
+}
+
+// A replayed start that moves a workout's start time earlier must pull in the finish of a
+// neighbour that now runs past it: no workout continues past the start of the next one,
+// and a corrected start is no exception.
+func TestMovedStartClampsOverlappingNeighbour(t *testing.T) {
+	s := newTestStore(t)
+	userID := seedUser(t, s, "igor", programA)
+	first, second := uuidN(100), uuidN(200)
+
+	apply(t, s, userID, "phone", []Op{
+		opStart(1, first, "d1", at(0), at(0), programA),
+		opFinish(2, first, at(3600), at(3600)),
+		opStart(3, second, "d2", at(7200), at(7200), programA),
+	})
+	// A fresher start for the second workout says it actually began inside the first one.
+	apply(t, s, userID, "tablet", []Op{
+		opStart(4, second, "d2", at(1800), at(9000), programA),
+	})
+
+	var finishedAt int64
+	if err := s.db.R.QueryRowContext(context.Background(),
+		`SELECT finished_at FROM sessions WHERE id = ?`, first).Scan(&finishedAt); err != nil {
+		t.Fatalf("прочитать тренировку: %v", err)
+	}
+	if finishedAt != at(1800) {
+		t.Fatalf("первая тренировка заканчивается в %d, ожидалось %d — новое начало соседа не подтянуло её завершение",
+			finishedAt, at(1800))
 	}
 }

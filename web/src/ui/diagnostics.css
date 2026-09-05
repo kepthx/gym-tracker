@@ -58,6 +58,13 @@
   border-bottom: 1px solid var(--border);
 }
 
+.diag-dead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .diag-list code {
   color: var(--text);
   font-size: 12px;

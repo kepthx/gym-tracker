@@ -266,3 +266,99 @@ describe('пустая очередь', () => {
     expect(engine.getStatus().state).toBe('synced')
   })
 })
+
+describe('запрос во время отправки', () => {
+  /**
+   * A tap that lands while a sync is in flight must not wait for the 15-second poll: the
+   * running flush has to go round once more when it finishes.
+   */
+  it('не теряется, а уходит следующим кругом', async () => {
+    await seedQueue(1)
+    let release!: () => void
+    postSync.mockImplementationOnce(
+      () =>
+        new Promise<SyncResponse>((resolve) => {
+          release = () =>
+            resolve({ ...emptyResponse(), results: [{ op_id: 'op-0', status: 'applied' }] })
+        }),
+    )
+    postSync.mockResolvedValue({
+      ...emptyResponse(),
+      results: [{ op_id: 'op-1', status: 'applied' }],
+    })
+
+    const engine = newEngine()
+    const first = engine.flush()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    await applyLocal(op('op-1', 1), ({ sets }) => sets.put(setRow(1)))
+    const second = engine.flush() // lands while the first request is still open
+    release()
+    await Promise.all([first, second])
+
+    expect(postSync).toHaveBeenCalledTimes(2)
+    expect(await outboxSize()).toBe(0)
+    expect(engine.getStatus().state).toBe('synced')
+  })
+})
+
+describe('отказ всего батча', () => {
+  /**
+   * A 4xx refuses the whole request, so the per-operation verdicts never arrive. Retrying
+   * verbatim would fail forever and jam everything behind the bad operation; instead the
+   * batch is narrowed until the culprit stands alone, and only it is dead-lettered.
+   */
+  it('сужает батч, изолирует виновника и пропускает остальных', async () => {
+    await seedQueue(4)
+    postSync.mockImplementation((body: { ops: { op_id: string }[] }) => {
+      if (body.ops.some((o) => o.op_id === 'op-2')) {
+        return Promise.reject(new ApiError(422, 'bad_request', 'не разбирается'))
+      }
+      return Promise.resolve({
+        ...emptyResponse(),
+        results: body.ops.map((o) => ({ op_id: o.op_id, status: 'applied' as const })),
+      })
+    })
+
+    const engine = newEngine()
+    await engine.flush()
+
+    expect(await outboxSize()).toBe(0)
+    const dead = await deadLetters()
+    expect(dead.map((d) => d.op.op_id)).toEqual(['op-2'])
+    expect(dead[0]!.reason).toContain('не разбирается')
+    expect(engine.getStatus().dead).toBe(1)
+  })
+
+  it('без очереди 4xx остаётся просто ошибкой', async () => {
+    getSync.mockRejectedValue(new ApiError(404, 'not_found', 'нет такого метода'))
+
+    const engine = newEngine()
+    await engine.flush()
+
+    expect(engine.getStatus().state).toBe('error')
+    expect(await deadLetters()).toHaveLength(0)
+  })
+})
+
+describe('снятие отклонённой операции', () => {
+  it('убирает запись и гасит красный индикатор', async () => {
+    await seedQueue(1)
+    postSync.mockResolvedValue({
+      ...emptyResponse(),
+      results: [{ op_id: 'op-0', status: 'rejected', reason: 'нет такой тренировки' }],
+    })
+
+    const engine = newEngine()
+    await engine.flush()
+    expect(engine.getStatus().state).toBe('error')
+
+    const { dismissDeadLetters } = await import('../db/idb')
+    await dismissDeadLetters(['op-0'])
+    await engine.recount()
+
+    expect(await deadLetters()).toHaveLength(0)
+    expect(engine.getStatus().state).toBe('synced')
+    expect(engine.getStatus().dead).toBe(0)
+  })
+})

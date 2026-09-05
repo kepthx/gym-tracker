@@ -41,6 +41,7 @@ export interface SessionRow {
   started_at: number
   finished_at: number | null
   deleted: boolean
+  /** Reserved: nothing writes it yet. Mirrors sessions.note in the schema. */
   note: string
   updated_ts: number
   updated_by: string
@@ -54,6 +55,10 @@ export interface SetRow {
   done: boolean
   weight: number | null
   reps: string | null
+  /**
+   * Reserved: nothing writes it yet, the selectors already honour it. When an op does, it
+   * must be a monotone tombstone like a session's — never a plain LWW field.
+   */
   deleted: boolean
   updated_ts: number
   updated_by: string
