@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test'
-import type { Locator, Page } from '@playwright/test'
 
 const PASSWORD = process.env.E2E_PASSWORD ?? 'очень-секретный-пароль'
 
@@ -137,24 +136,15 @@ test('выход из тренировки требует подтвержден
   await expect(page.locator('.set-btn-done')).toHaveCount(1)
 })
 
-/** A hold on a marked square: that is where the reps editor lives now. */
-async function holdSet(page: Page, button: Locator): Promise<void> {
-  const box = await button.boundingBox()
-  if (!box) throw new Error('кнопка подхода не видна')
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
-  await page.mouse.down()
-  await page.waitForTimeout(600)
-  await page.mouse.up()
-}
-
 /**
- * The whole set column in one exercise: the tap gives the keyboard to the weight, a hold
- * gives it to the reps, and the reps take digits with the exercise's unit printed beside them.
+ * The whole set column in one exercise: the tap gives the keyboard to the weight, a second
+ * tap gives it to the reps, and the reps take digits with the exercise's unit printed beside
+ * them.
  *
  * The kilograms matter as much as the order here. A weight of 28,5 that cannot be typed is
  * what sent a week of them into the reps box instead.
  */
-test('тап отдаёт клавиатуру весу, удержание — повторениям', async ({ page }) => {
+test('тап отдаёт клавиатуру весу, второй тап — повторениям', async ({ page }) => {
   await page.goto('/')
   await page.getByPlaceholder('Пароль').fill(PASSWORD)
   await page.getByRole('button', { name: 'Войти' }).click()
@@ -174,7 +164,8 @@ test('тап отдаёт клавиатуру весу, удержание — 
   await weight.blur()
   await expect(weight).toHaveValue('28,5')
 
-  await holdSet(page, button)
+  // The second tap on a marked square opens the editor in its place; it does not unmark.
+  await button.click()
 
   const reps = carry.locator('.reps-field')
   await expect(reps).toBeFocused()
@@ -193,6 +184,45 @@ test('тап отдаёт клавиатуру весу, удержание — 
   await page.reload()
   await expect(carry.getByRole('button', { name: 'Подход 1' })).toHaveText('45м')
   await expect(carry.getByPlaceholder('кг').first()).toHaveValue('28,5')
+})
+
+/**
+ * Unmarking lives under the open editor and nowhere else. Whatever was typed into the
+ * field before «Снять» must not be saved on the way out: the press blurs the field, the
+ * blur wants to save, and the unmark has to win that race.
+ */
+test('«Снять» под редактором снимает отметку и не сохраняет набранное', async ({ page }) => {
+  await page.goto('/')
+  await page.getByPlaceholder('Пароль').fill(PASSWORD)
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await page.getByRole('button', { name: /1\. Ноги/ }).click()
+
+  const squat = page.locator('section.exercise').filter({ hasText: 'Присед со штангой' })
+  const button = squat.getByRole('button', { name: 'Подход 1' })
+  const unmark = squat.getByRole('button', { name: 'Снять отметку, подход 1' })
+
+  // Nothing marked: nothing to unmark, and no control offering to.
+  await expect(unmark).toHaveCount(0)
+
+  await button.click()
+  await expect(squat.locator('.set-btn-done')).toHaveCount(1)
+  await expect(unmark).toHaveCount(0)
+
+  await button.click()
+  const reps = squat.locator('.reps-field')
+  await expect(reps).toBeFocused()
+  await expect(unmark).toBeVisible()
+
+  await reps.pressSequentially('6')
+  await unmark.click()
+
+  await expect(squat.locator('.reps-field')).toHaveCount(0)
+  await expect(squat.locator('.set-btn-done')).toHaveCount(0)
+  await expect(button).toHaveText('—')
+
+  await page.reload()
+  await expect(squat.getByRole('button', { name: 'Подход 1' })).toHaveText('—')
+  await expect(squat.locator('.set-btn-done')).toHaveCount(0)
 })
 
 /**

@@ -114,9 +114,9 @@
   width: var(--tap);
   height: var(--tap);
   border-radius: 12px;
-  /* Green fill because the set is already counted — the editor only ever opens on a set
-     that the tap has just marked — and an accent border because it is being edited. Losing
-     the green while typing would take back the one thing the tap had just confirmed. */
+  /* Green fill because the set is already counted — the editor only ever opens on a marked
+     set — and an accent border because it is being edited. Losing the green while typing
+     would take back the one thing the tap had confirmed. */
   border: 1px solid var(--accent);
   background: var(--done-fill);
   display: flex;
@@ -167,5 +167,21 @@
 
 /* Reps mode is on: the squares of this card are fields, and this button closes them. */
 .guide-toggle[aria-pressed='true'] {
+  color: var(--accent);
+}
+
+/* Under the column whose square is a reps field: the one place unmarking is offered.
+   Text-sized and quiet, because it is the rare act — a square hit by mistake — and it must
+   not read as a third thing every set needs. The height is a finger's, the look is a word's. */
+.set-unmark {
+  min-height: 32px;
+  padding: 4px 0;
+  background: none;
+  border: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.set-unmark:focus-visible {
   color: var(--accent);
 }

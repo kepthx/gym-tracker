@@ -260,7 +260,9 @@ function SetColumn({
   // must not end up recorded because a field was pre-filled and then left alone.
   const last = lastSetAt(previous, idx)
   const weightRef = useRef<HTMLInputElement>(null)
-  const pressedAt = useRef(0)
+  // Set the instant «Снять» is pressed, before the editor's blur can run: an unmark and the
+  // editor's own save race each other inside one gesture, and the save must lose.
+  const unmarking = useRef(false)
 
   /**
    * Tapping the button IMMEDIATELY writes the mark with the default reps and highlights the
@@ -271,15 +273,15 @@ function SetColumn({
    * The reps are not that number: they come from the program and are right almost every
    * time. An editor for them opening over the square the finger has just hit is what
    * swallowed a week of weights — everything typed straight after a tap went into it.
+   *
+   * A second tap on a marked set opens that editor. It used to be a hold, and a hold is a
+   * gesture the phone keeps for itself: text selection, the callout, a finger that drifted
+   * a few pixels — any of them eats the click and nothing happens. A plain tap always
+   * lands. Unmarking, the rarer act, moves into the editor as its own control.
    */
   function toggle() {
     if (done) {
-      void upsertSet(sessionID, exercise.id, idx, {
-        done: false,
-        weight: row?.weight ?? null,
-        reps: row?.reps ?? null,
-      })
-      onEdit(null)
+      onEdit(idx)
       return
     }
     void upsertSet(sessionID, exercise.id, idx, {
@@ -296,21 +298,23 @@ function SetColumn({
   }
 
   /**
-   * Holding a marked set opens the reps editor: the rare correction — six instead of eight —
-   * asked for deliberately rather than offered after every tap. A hold on an unmarked set is
-   * just a slow tap, because the editor only ever belongs on a set that is already counted.
+   * Runs on pointerdown, not on click. On a touch screen the press blurs the reps field
+   * first, the blur closes the editor, and this button is unmounted before its click could
+   * ever arrive — so the work is done at the first event of the gesture, and the flag keeps
+   * the blur that follows from saving reps into a set that is no longer counted. The click
+   * handler is for a keyboard, where there is no pointer and the button still exists.
    */
-  const HOLD_MS = 450
-
-  function press() {
-    const started = pressedAt.current
-    pressedAt.current = 0
-    // started === 0 means the activation came from a keyboard, not a finger: no hold to read.
-    if (started !== 0 && Date.now() - started >= HOLD_MS && done) {
-      onEdit(idx)
-      return
-    }
-    toggle()
+  function unmark() {
+    if (unmarking.current) return
+    unmarking.current = true
+    onEdit(null)
+    void upsertSet(sessionID, exercise.id, idx, {
+      done: false,
+      weight: row?.weight ?? null,
+      reps: row?.reps ?? null,
+    }).finally(() => {
+      unmarking.current = false
+    })
   }
 
   return (
@@ -327,6 +331,7 @@ function SetColumn({
           unit={repsUnit(exercise.default_reps)}
           placeholder={repsCount(row?.reps ?? exercise.default_reps)}
           onDone={(reps) => {
+            if (unmarking.current) return
             onEdit(null)
             // An empty field means "leave what the tap wrote": the default is already
             // saved, so the usual case — the default was right — takes no typing and no
@@ -344,10 +349,7 @@ function SetColumn({
       ) : (
         <button
           class={`set-btn ${done ? 'set-btn-done' : ''}`}
-          onPointerDown={() => {
-            pressedAt.current = Date.now()
-          }}
-          onClick={press}
+          onClick={toggle}
           aria-label={`Подход ${idx + 1}`}
         >
           {done ? (row?.reps ?? exercise.default_reps) : '—'}
@@ -366,6 +368,30 @@ function SetColumn({
             void setWeight(sessionID, exercise.id, idx, weight)
           }}
         />
+      )}
+
+      {/* Lives under the editor, in the editor's own column, and only while it is open: the
+          set being unmarked is the one whose square is a field right now, so the control is
+          next to what it acts on and never beside a square that is merely marked, where a
+          finger aiming at the next set could brush it. Appearing below the column moves
+          nothing above it — the finger is on the square, the keyboard is coming up. */}
+      {editing && done && (
+        <button
+          class="set-unmark"
+          data-keep-editor
+          aria-label={`Снять отметку, подход ${idx + 1}`}
+          onPointerDown={unmark}
+          onClick={unmark}
+          /* Focus reached here from the field by Tab, and is now leaving without a press:
+             close the editor the way the field's own blur would have. */
+          onBlur={(e) => {
+            if (!(e.relatedTarget instanceof HTMLElement && e.relatedTarget.classList.contains('reps-field'))) {
+              onEdit(null)
+            }
+          }}
+        >
+          Снять
+        </button>
       )}
     </div>
   )
@@ -495,7 +521,14 @@ function RepsEditor({
         onKeyDown={(e) => {
           if (e.key === 'Enter') onDone(joinReps(text, unit))
         }}
-        onBlur={() => onDone(joinReps(text, unit))}
+        /* Focus moving to a control marked data-keep-editor — the unmark button under this
+           column — is not the editor being left: that button handles what happens next. A
+           pointer never gets here, because a tap does not focus a button; it is the keyboard
+           path, and without it Tab would close the editor before the button could be reached. */
+        onBlur={(e) => {
+          if (e.relatedTarget instanceof HTMLElement && 'keepEditor' in e.relatedTarget.dataset) return
+          onDone(joinReps(text, unit))
+        }}
       />
       {/* Not read out: the field's own label already says what is being entered, and the
           unit repeated after every number turns the screen reader into a metronome. */}

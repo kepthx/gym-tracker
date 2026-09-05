@@ -122,10 +122,12 @@ The exception is an exercise with no weight at all. There the reps are the whole
 the tap opens their editor, as before.
 
 Correcting the reps — six instead of eight — is a deliberate act, and there are two ways to
-ask for it. Holding a marked square opens an editor in its place. A quiet control below the
-set row, appearing only once something in the card is marked, opens every marked set of that
-exercise at once, which is how "8, 8, 6" gets recorded in one pass. The hold is the shortcut;
-the control is what makes the correction findable at all, and reachable without a finger.
+ask for it. Tapping a marked square again opens an editor in its place. A quiet control below
+the set row, appearing only once something in the card is marked, opens every marked set of
+that exercise at once, which is how "8, 8, 6" gets recorded in one pass. The second tap is
+the shortcut; the control is what makes the whole row one pass. It was a hold once, and a
+hold is a gesture the phone keeps for itself — text selection, the callout, a finger that
+drifted — so it landed only sometimes, and a correction that lands sometimes is not one.
 Either way the editor is pre-filled with nothing and shows the program's value as a hint, so
 the ordinary case costs no typing and no clearing. The field takes digits and
 nothing else: where an exercise is measured in something other than repetitions — "30s",
@@ -140,7 +142,9 @@ within a single gesture. So the second one must be built from what storage holds
 moment, never from what the screen was rendered with, or the weight arrives carrying a
 "not done" from before the mark landed and quietly undoes it.
 
-Tapping a marked set again unmarks it.
+Unmarking a set — a square hit by mistake — is offered only while its editor is open, as a
+small control under that column. It is the rarest act on the screen and the one a stray tap
+must never perform, which is why it is not the second tap itself.
 
 **Technique reference.** Every exercise card carries a quiet control that expands a guide in
 place: a one-line summary of the movement, several technique cues, the usual mistakes, and a
